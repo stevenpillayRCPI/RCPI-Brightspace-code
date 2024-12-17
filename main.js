@@ -58,9 +58,43 @@ $(function () {
 	//	/* responsive image within full width wrapper */
 	//	$('.fullwidth-wrapper img').addClass('img-responsive');
 
-	/* hyperlink icon */
-	var external_link = ' <span class="sr-only">opens in new window</span><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span>';
-	$('a[target=_blank]').append(external_link);
+   /* Hyperlink icon ONLY if NOT creator+ */
+
+   window.onload = function() {
+    // Function to check if an element has an ancestor with class "d2l-element"
+    function hasD2LElementAncestor(element) {
+        let currentNode = element.parentElement;
+        while (currentNode) {
+            if (currentNode.classList.contains('d2l-element')) {
+                return true;
+            }
+            currentNode = currentNode.parentElement;
+        }
+        return false;
+    }
+
+    // Get all <a> elements in the document
+    const allLinks = document.getElementsByTagName('a');
+
+    // Process each link
+    Array.from(allLinks).forEach(link => {
+        if (hasD2LElementAncestor(link)) {
+            console.log('Link with d2l-element ancestor:', link.href);
+
+            // Add your extra code here for links with d2l-element ancestors
+            // For example:
+            // link.addEventListener('click', function(e) {
+            //     e.preventDefault();
+            //     console.log('Clicked link with d2l-element ancestor');
+            // });
+        } else {
+            console.log('Link without d2l-element ancestor:', link.href);
+			var external_link = ' <span class="sr-only">opens in new window</span><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span>';
+			$('a[target=_blank]').append(external_link);
+        }
+    });
+};
+
 	
 	//Add Unique IDs to True & False Questions
 		var TFRevealNumber = 1;
