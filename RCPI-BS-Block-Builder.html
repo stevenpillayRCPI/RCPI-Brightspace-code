@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Bootstrap Components</title>
+  <!-- Bootstrap CSS -->
+
+  <link rel="stylesheet" href="/shared/HTML-Template-Library/Templates2025/bootstrap.css">
+  <script defer="" src="/shared/HTML-Template-Library/Templates2025/bootstrap.bundle.js"></script> 
+  <script defer="" src="/shared/HTML-Template-Library/Templates2025/utils.js"></script> 
+  <script defer="" src="/shared/HTML-Template-Library/Templates2025/element-creator.js"></script> 
+  <script defer="" src="/shared/HTML-Template-Library/Templates2025/chart.min.js"></script> 
+
+  <!-- <link rel="stylesheet" href="bootstrap.css">
+  <script defer="" src="bootstrap.bundle.js"></script> 
+  <script defer="" src="element-creator.js"></script>  -->
+
+  
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="preload" href="/shared/HTML-Template-Library/Templates2025/health-icons.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<!-- Material Symbols (newest Google icons) -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+
+<!-- Material Icons (classic Google icons) -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<!-- HugeIcons Free -->
+<link rel="stylesheet" href="https://cdn.hugeicons.com/font/hgi-stroke-rounded.css">
+<!-- <script defer src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script> -->
+<style>
+
+    :root {
+    --bs-primary: var(--bs-navy); 
+    --bs-secondary: var(--bs-purple);
+    --bs-tertiary: var(--bs-gold);
+
+    --bs-primary-lightness: var(--bs-navy-lightness);
+    --bs-secondary-lightness: var(--bs-purple-lightness);
+    --bs-tertiary-lightness: var(--bs-gold-lightness);
+  }
+
+    i {
+        color: var(--bs-primary-dark);
+    }
+    button i {
+        font-size: 2rem;
+    }
+  h2:not(.accordion-header) {
+    color: white;
+    background-color: #002d72;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    margin-right: 1rem;
+  }
+  hr {
+    border: 2px dotted var(--bs-tertiary);
+    opacity: 1;
+  }
+  .component-section {
+    margin-bottom: 3rem;
+  }
+
+  .row-controls-sticky {
+  position: sticky;
+  top: 0;
+  background: white;
+  border-bottom: 1px solid #dee2e6;
+  margin-bottom: 1rem;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+  /* Override the default button margins for sticky header buttons */
+.row-controls-sticky .btn.sticky-btn {
+  margin: 0 !important;  /* Override your existing .row-controls-sticky .btn rule */
+}
+
+/* Ensure consistent padding for the sticky container */
+.row-controls-sticky > .d-flex {
+  padding: 0.5rem;
+}
+
+
+.creator-component-nav-overlay {
+  position: relative;
+  display: inline-block;
+}
+
+.creator-nav-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  display: none;
+  margin-top: 0.25rem;
+  min-width: 250px;
+  max-width: 300px;
+  z-index: 1001;
+}
+
+.creator-nav-dropdown.show {
+  display: block;
+}
+
+.creator-nav-grid {
+  padding: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.creator-nav-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.125rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.creator-nav-item:hover {
+  background-color: #f8f9fa;
+}
+
+.creator-nav-item.active {
+  background-color: #0d6efd;
+  color: white;
+}
+
+
+.row-controls-sticky .btn {
+  margin: 0;
+}
+
+  .row {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  #quickSelectList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px 4px;
+  padding: 0 2px;
+}
+
+@media (min-width: 576px) {
+  #quickSelectList {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1200px) {
+  #quickSelectList {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+#matchBuilder { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+#matchBuilder .match-bin, #matchBuilder .match-option { cursor: default; }
+#matchBuilder .match-bin-options { display: flex; flex-direction: column; gap: .5rem; padding: .75rem; }
+#matchBuilder .match-bin-tools { display: flex; gap: .5rem; padding: 0 .75rem .75rem; }
+  
+</style>
+
+<!-- Place the first <script> tag in your HTML's <head> -->
+ 
+</head><body><div class="container mt-4">
+<div class="row wysiwyg-mode">
+<div class="row-controls-sticky">
+<div class="d-flex justify-content-between align-items-center flex-nowrap" style="padding: 0.5rem 0;"><!-- Left side: Navigation and Filter -->
+<div class="d-flex align-items-center gap-2 flex-shrink-0">
+<div class="creator-component-nav-overlay"><button id="navToggle" class="btn btn-sm btn-outline-primary sticky-btn">&nbsp;<i class="fas fa-bars"></i> Sections </button>
+<div class="creator-nav-dropdown" id="navDropdown">
+<div class="creator-nav-grid" id="dynamicNavItems"><!-- Items will be populated dynamically --></div>
+</div>
+</div>
+<input type="text" id="componentFilter" class="form-control form-control-sm mb-0" placeholder="Search..." style="width: 6rem; min-width: 4rem;"> <button class="btn btn-sm btn-primary" id="quickSelectToggle"> Quick </button></div>
+<!-- Right side: Copy buttons with Row/Rows -->
+<div class="d-flex gap-1 flex-shrink-0"><button class="btn btn-secondary btn-sm sticky-btn text-nowrap" id="copyNewRowTinyMCE">1 Row</button> <button class="btn btn-secondary btn-sm sticky-btn text-nowrap" id="copy10RowsTinyMCE">10 Rows</button>
+<div class="dropdown flex-shrink-0"><button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="colorRowDropdown" data-bs-toggle="dropdown" aria-expanded="false"> Color Row</button>
+<ul class="dropdown-menu" aria-labelledby="colorRowDropdown">
+<li><button class="dropdown-item color-copy" data-color="primary">Primary</button></li>
+<li><button class="dropdown-item color-copy" data-color="secondary">Secondary</button></li>
+<li><button class="dropdown-item color-copy" data-color="tertiary">Tertiary</button></li>
+<li><button class="dropdown-item color-copy" data-color="navy">Navy</button></li>
+<li><button class="dropdown-item color-copy" data-color="gold">Gold</button></li>
+<li><button class="dropdown-item color-copy" data-color="lightblue">Lightblue</button></li>
+<li><button class="dropdown-item color-copy" data-color="yellow">Yellow</button></li>
+<li><button class="dropdown-item color-copy" data-color="purple">Purple</button></li>
+<li><button class="dropdown-item color-copy" data-color="red">Red</button></li>
+<li><button class="dropdown-item color-copy" data-color="forest">Forest</button></li>
+<li><button class="dropdown-item color-copy" data-color="lavender">Lavender</button></li>
+<li><button class="dropdown-item color-copy" data-color="green">Green</button></li>
+</ul>
+</div>
+</div>
+<!-- Center: Tool buttons with text -->
+<div class="d-flex gap-1 flex-shrink-0"><button class="btn btn-sm btn-primary sticky-btn text-nowrap" type="button" data-bs-toggle="offcanvas" data-bs-target="#imagePickerOffcanvas"> <i class="fas fa-image"></i> Images </button> <button class="btn btn-sm btn-secondary sticky-btn text-nowrap" type="button" data-bs-toggle="offcanvas" data-bs-target="#colorSelectorOffcanvas"> <i class="fas fa-palette"></i>&nbsp;Theme</button> <button class="btn btn-sm btn-primary sticky-btn text-nowrap" type="button" data-bs-toggle="offcanvas" data-bs-target="#instructionsOffcanvas"> <i class="fas fa-question-circle"></i> Help </button></div>
+</div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="col-12">
+<p>Note: Do not use edit mode on this page.</p>
+</div>
+</div>
+<div class="component-section" data-name="Text and Lists">
+<h2>Text Columns</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-secondary copy-2-col-wysiwyg">2-Column</button> <button class="btn mb-1 btn-secondary copy-3-col-wysiwyg">3-Column</button> <button class="btn mb-1 btn-secondary copy-2-col-no-line-wysiwyg">2-Column No Line</button></div>
+<div class="mt-auto"><button class="btn mb-1 btn-outline-secondary copy-2-col">2-Column Code</button> <button class="btn mb-1 btn-outline-secondary copy-3-col">3-Column Code</button> <button class="btn mb-1 btn-outline-secondary copy-2-col-no-line">2-Column No Line Code</button></div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="columns-2">
+<div class="col-12 col-sm-6">
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+</div>
+<div class="col-12 col-sm-6">
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+</div>
+</div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="columns-3">
+<div class="col-12 col-md-4">
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+</div>
+<div class="col-12 col-md-4">
+<p>Lorem ipsdum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+</div>
+<div class="col-12 col-md-4">
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+</div>
+</div>
+</div>
+<h2>Large Number List</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-secondary copy-large-number-list-wysiwyg">Large Number List</button></div>
+<div class="mt-auto"><button class="btn mb-1 btn-outline-secondary copy-large-number-list">Large Number List Code</button></div>
+</div>
+<div class="row wysiwyg-mode">
+<ol class="large-number">
+<li>Item</li>
+<li>Item</li>
+</ol>
+</div>
+<div class="component-section" data-name="Icon Lists">
+<h2>Icon Lists</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-success add-item">Add Icon Item</button> <button class="btn mb-1 btn-danger remove-item">Remove Icon Item</button></div>
+<div class="mt-auto"><button class="btn mb-1 btn-secondary copy-wysiwyg">Icon List</button> <button class="btn mb-1 btn-outline-secondary copy-code">Icon List Code</button></div>
+</div>
+<div class="component-container">
+<ul class="icon-list">
+<li><i class="bi bi-check-circle-fill" aria-hidden="true">&nbsp;</i> Item
+<div class="item-actions"><button class="btn btn-sm btn-outline-primary change-icon">Change Icon</button></div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="component-section" data-name="Images">
+<h2>Images</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-secondary copy-image-placeholder-wysiwyg">Image Placeholder</button> <button class="btn mb-1 btn-secondary copy-decorative-image-placeholder-wysiwyg">Decorative Image Placeholder</button></div>
+<div class="mt-auto"><button class="btn mb-1 btn-outline-secondary copy-image-placeholder">Image Placeholder Code</button> <button class="btn mb-1 btn-outline-secondary copy-decorative-image-placeholder">Decorative Image Placeholder Code</button></div>
+</div>
+<figure class="wysiwyg-mode"><img src="https://placehold.co/1920x1080/EEE/31343C" alt="ALT TEXT NEEDED" class="img-fluid">
+<figcaption>Remember caption and alt text</figcaption>
+</figure>
+<h2>Image Columns</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-secondary copy-wide-img-left-col-wysiwyg">Image on Left</button> <button class="btn mb-1 btn-secondary copy-wide-img-col-wysiwyg">Image on Right</button> <button class="btn mb-1 btn-secondary copy-wide-img-left-col-decorative-wysiwyg">Decorative Left</button> <button class="btn mb-1 btn-secondary copy-wide-img-col-decorative-wysiwyg">Decorative Right</button></div>
+<div class="mt-auto"><button class="btn mb-1 btn-outline-secondary copy-wide-img-left-col">Image on Left Code</button> <button class="btn mb-1 btn-outline-secondary copy-wide-img-col">Image on Right Code</button> <button class="btn mb-1 btn-outline-secondary copy-wide-img-left-col-decorative">Decorative Left Code</button> <button class="btn mb-1 btn-outline-secondary copy-wide-img-col-decorative">Decorative Right Code</button></div>
+</div>
+<!-- START OF IMAGE ON RIGHT BLOCK -->
+<div class="row wysiwyg-mode">
+<div class="image-column">
+<div class="col-12 col-md-6">
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+</div>
+<div class="col-12 col-md-6">
+<figure class="wysiwyg-mode">
+<div class="image-container"><img src="https://placehold.co/1920x1080/EEE/31343C" alt="" class="img-fluid"></div>
+<figcaption>Remember caption and alt text</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<h2>Icon Columns</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-secondary copy-icon-left-col-wysiwyg">Icon on Left Layout</button> <button class="btn mb-1 btn-secondary copy-icon-col-wysiwyg">Icon on Right Layout</button></div>
+<div class="mt-auto"><button class="btn mb-1 btn-outline-secondary copy-icon-left-col">Icon on Left Layout Code</button> <button class="btn mb-1 btn-outline-secondary copy-icon-col">Icon on Right Layout Code</button></div>
+</div>
+<!-- Only Icon on Right preview is shown -->
+<div class="row wysiwyg-mode" id="icon-column-right">
+<div class="image-column">
+<div class="col-12 col-md-6">
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+</div>
+<div class="col-12 col-md-6 icon-container">
+<div class="d-flex justify-content-center align-items-center h-100"><i class="bi bi-info icon-xl" aria-hidden="true"></i> <button class="btn mb-1 btn-outline-primary change-icon btn-sm ms-2" type="button">Change Icon</button></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Cards Section -->
+<div class="component-section" data-name="Cards">
+<h2>Cards</h2>
+<div class="component-controls mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-outline-primary copy-white-card-wysiwyg">White Card</button> <button class="btn mb-1 btn-outline-primary copy-white-card">White Card Code</button></div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="card card-white">
+<div class="card-body">
+<h3>Title&nbsp;</h3>
+<p>Content&nbsp;</p>
+</div>
+</div>
+</div>
+<div class="component-controls mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-primary copy-primary-card-wysiwyg">Primary Card</button> <button class="btn mb-1 btn-outline-primary copy-primary-card">Primary Card Code</button></div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="card">
+<div class="card-body card-primary">
+<h3>Title&nbsp;</h3>
+<p>Content&nbsp;</p>
+</div>
+</div>
+</div>
+<div class="component-controls mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-secondary copy-secondary-card-wysiwyg">Secondary Card</button> <button class="btn mb-1 btn-outline-secondary copy-secondary-card">Secondary Card Code</button></div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="card">
+<div class="card-body card-secondary">
+<h3>Title&nbsp;</h3>
+<p>Content&nbsp;</p>
+</div>
+</div>
+</div>
+<div class="component-controls mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-tertiary copy-tertiary-card-wysiwyg">Tertiary Card</button> <button class="btn mb-1 btn-outline-tertiary copy-tertiary-card">Tertiary Card Code</button></div>
+<div class="row wysiwyg-mode">
+<div class="card">
+<div class="card-body card-tertiary">
+<h3>Title&nbsp;</h3>
+<p>Content&nbsp;</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="component-section" data-name="Icon Cards">
+<h2>Icon Cards</h2>
+<div class="component-controls mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-outline-primary copy-white-icon-card-wysiwyg">White Icon Card</button> <button class="btn mb-1 btn-outline-primary copy-white-icon-card">White Icon Card Code</button></div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="card card-white card-with-icon">
+<div class="icon-column"><button class="btn mb-1 btn-outline-primary change-icon btn-sm">Change Icon</button> <i class="bi bi-star-fill"></i></div>
+<div class="content-column">
+<h3 class="card-title">Title&nbsp;</h3>
+<p class="card-text">Content</p>
+</div>
+</div>
+</div>
+<div class="component-controls mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-primary copy-primary-icon-card-wysiwyg">Primary Card Icon</button> <button class="btn mb-1 btn-outline-primary copy-primary-icon-card">Primary Icon Card Code</button></div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="card card-primary card-with-icon">
+<div class="icon-column"><button class="btn mb-1 btn-outline-primary change-icon btn-sm">Change Icon</button> <i class="bi bi-star-fill"></i></div>
+<div class="content-column">
+<h3 class="card-title">Title&nbsp;</h3>
+<p class="card-text">Content</p>
+</div>
+</div>
+</div>
+<div class="component-controls mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-secondary copy-secondary-icon-card-wysiwyg">Secondary Icon Card</button> <button class="btn mb-1 btn-outline-secondary copy-secondary-icon-card">Secondary Icon Card Code</button></div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="card card-secondary card-with-icon">
+<div class="icon-column"><button class="btn mb-1 btn-outline-secondary change-icon btn-sm">Change Icon</button> <i class="bi bi-star-fill"></i></div>
+<div class="content-column">
+<h3 class="card-title">Title</h3>
+<p class="card-text">Content</p>
+</div>
+</div>
+</div>
+<div class="component-controls mb-3">
+<div class="mt-auto"><button class="btn mb-1 btn-tertiary copy-tertiary-icon-card-wysiwyg">Tertiary Card Icon</button> <button class="btn mb-1 btn-outline-tertiary copy-tertiary-icon-card">Tertiary Card Icon Code</button></div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="card card-tertiary card-with-icon">
+<div class="icon-column"><button class="btn mb-1 btn-outline-tertiary change-icon btn-sm">Change Icon</button> <i class="bi bi-star-fill"></i></div>
+<div class="content-column">
+<h3 class="card-title">Title</h3>
+<p class="card-text">Content</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Accordion Section -->
+<div class="component-section" data-name="Accordions">
+<h2>Accordions</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success add-item">Add Accordion</button> <button class="btn mb-1 btn-danger remove-item">Remove</button></div>
+<div><button class="btn mb-1 btn-secondary copy-transcript-accordion-wysiwyg">Transcript</button> <button class="btn mb-1 btn-secondary copy-wysiwyg">Accordion</button> <button class="btn mb-1 btn-outline-secondary copy-code">Accordion Code</button></div>
+</div>
+<!-- Accordion Container -->
+<div class="row wysiwyg-mode">
+<div class="accordion component-container" id="mainAccordion"></div>
+</div>
+</div>
+<!-- Numbered Accordion Section -->
+<div class="component-section" data-name="Numbered Accordions">
+<h2>Numbered Accordions</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success add-item">Add Accordion</button> <button class="btn mb-1 btn-danger remove-item">Remove</button></div>
+<div><button class="btn mb-1 btn-secondary copy-transcript-accordion-wysiwyg">Transcript</button> <button class="btn mb-1 btn-secondary copy-wysiwyg">Numbered Accordion</button> <button class="btn mb-1 btn-outline-secondary copy-code">Numbered Accordion Code</button></div>
+</div>
+<!-- Numbered Accordion Container -->
+<div class="accordion numbered-accordion component-container" id="numberedAccordion">
+<ol></ol>
+</div>
+</div>
+<!-- Icon Accordion Section -->
+<div class="component-section" data-name="Icon Accordions">
+<h2>Icon Accordions</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="component-controls mb-3"><button class="btn mb-1 btn-success add-item">Add Accordion</button> <button class="btn mb-1 btn-danger remove-item">Remove Accordion</button></div>
+<div><button class="btn mb-1 btn-secondary copy-transcript-accordion-wysiwyg">Transcript</button> <button class="btn mb-1 btn-secondary copy-wysiwyg">Icon Accordion</button> <button class="btn mb-1 btn-outline-secondary copy-code">Icon Accordion Code</button></div>
+</div>
+<div class="row wysiwyg-mode">
+<div class="accordion icon-accordion component-container" id="iconAccordion"></div>
+</div>
+</div>
+<!-- Tabs Section -->
+<div class="component-section mt-5" data-name="Tabs">
+<h2>Tabs</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success add-item">Add Tab</button> <button class="btn mb-1 btn-danger remove-item">Remove</button></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Tabs</button> <button class="btn mb-1 btn-outline-secondary copy-code">Tabs Code</button></div>
+</div>
+<!-- Tabs Container -->
+<div class="row wysiwyg-mode"><!-- Tabs Navigation -->
+<ul class="nav nav-tabs nav-fill horizontal-tabs component-container" role="tablist"></ul>
+<!-- Tabs Content -->
+<div class="tab-content border border-1 p-3 wysiwyg-mode"></div>
+</div>
+</div>
+<!-- Vertical Tabs Section -->
+<div class="component-section" data-name="Vertical Tabs">
+<h2>Vertical Tabs</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success add-item">Add Tab</button> <button class="btn mb-1 btn-danger remove-item">Remove</button></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Vertical Tabs</button> <button class="btn mb-1 btn-outline-secondary copy-code">Vertical Tabs Code</button></div>
+</div>
+<!-- Vertical Tabs Container -->
+<div class="vertical-tabs-wrapper" contenteditable="false"><!-- Navigation -->
+<ul class="nav nav-tabs d-flex flex-row flex-md-column component-container" id="vertical-tabs-nav" role="tablist"><!-- Tab navigation items will be added here dynamically --></ul>
+<!-- Content Panels -->
+<div class="tab-content"><!-- Tab content panes will be added here dynamically --></div>
+</div>
+</div>
+<div class="component-section" data-name="Flipcards">
+<h2>Flipcards</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success add-item">Add Flipcard</button> <button class="btn mb-1 btn-danger remove-item">Remove Flipcard</button></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Flipcards</button><button class="btn mb-1 btn-outline-secondary copy-code">Flipcards Code</button></div>
+</div>
+<div class="row wysiwyg-mode flip-cards component-container"><!-- Flipcards will be added here dynamically --></div>
+</div>
+<div class="component-section" data-name="Text Carousels">
+<h2>Text Carousels</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success add-item">Add Slide</button> <button class="btn mb-1 btn-danger remove-item">Remove Slide</button></div>
+<div><span style="font-size: 1rem;" class="slide-counter mx-3">Current slides: <span id="text-slide-count">1</span></span></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Text Carousel</button> <button class="btn mb-1 btn-outline-secondary copy-code">Text Carousel Code</button></div>
+</div>
+<div class="component-container">
+<div class="row wysiwyg-mode">
+<div id="textCarouselExample" class="text-carousel carousel slide wysiwyg-mode col-12" aria-roledescription="carousel" aria-label="Text carousel"><!-- Carousel Indicators -->
+<div class="carousel-indicators text-carousel-indicators" role="tablist"><button type="button" data-bs-target="#textCarouselExample" data-bs-slide-to="0" role="tab" class="active" aria-selected="true" aria-current="true" aria-label="Slide 1"></button></div>
+<div class="text-carousel-container"><!-- Left Control --> <button class="text-carousel-control-prev btn btn-dark" type="button" data-bs-target="#textCarouselExample" data-bs-slide="prev" aria-label="Previous slide"> <span class="carousel-control-prev-icon" aria-hidden="true"></span> <span class="visually-hidden">Previous</span> </button> <!-- Carousel Items -->
+<div class="carousel-inner"><!-- Slides will be added here dynamically --></div>
+<!-- Right Control --> <button class="text-carousel-control-next btn btn-dark" type="button" data-bs-target="#textCarouselExample" data-bs-slide="next" aria-label="Next slide"> <span class="carousel-control-next-icon" aria-hidden="true"></span> <span class="visually-hidden">Next</span> </button></div>
+</div>
+</div>
+</div>
+</div>
+<div class="component-section" data-name="Image Carousels">
+<h2>Image Carousels</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success add-item">Add Slide</button> <button class="btn mb-1 btn-danger remove-item">Remove Slide</button></div>
+<div><span style="font-size: 1rem;" class="slide-counter mx-3">Current slides: <span id="slide-count">1</span></span></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Image Carousel</button> <button class="btn mb-1 btn-outline-secondary copy-code">Image Carousel Code</button></div>
+</div>
+<div class="component-container">
+<div class="row wysiwyg-mode">
+<div id="carouselExample" class="carousel image-carousel slide wysiwyg-mode col-12 col-md-10 offset-md-1" aria-roledescription="carousel" aria-label="Image carousel"><!-- Carousel Items -->
+<div class="carousel-inner"><!-- Slides will be added here dynamically --></div>
+<!-- Controls -->
+<div class="d-flex"><button class="carousel-control-prev btn btn-dark w-1" type="button" data-bs-target="#carouselExample" data-bs-slide="prev"> <span class="carousel-control-prev-icon" aria-hidden="true"></span> <span class="visually-hidden">Previous</span> </button> <button class="carousel-control-next btn btn-dark w-1" type="button" data-bs-target="#carouselExample" data-bs-slide="next"> <span class="carousel-control-next-icon" aria-hidden="true"></span> <span class="visually-hidden">Next</span> </button></div>
+</div>
+</div>
+</div>
+</div>
+<div class="component-section" data-name="Tables">
+<h2>Tables</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-secondary cycle-headers">Cycle Headers</button> <button class="btn mb-1 btn-success add-row">Add Row</button> <button class="btn mb-1 btn-success add-column">Add Column</button> <button class="btn mb-1 btn-danger remove-row">Remove Row</button> <button class="btn mb-1 btn-danger remove-column">Remove Column</button></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Table</button> <button class="btn mb-1 btn-outline-secondary copy-code">Table Code</button></div>
+</div>
+<div class="component-container">
+<div class="table-responsive">
+<table class="table"><caption>Header on Top</caption>
+<thead>
+<tr>
+<th scope="col">Header</th>
+<th scope="col">Header</th>
+<th scope="col">Header</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Data</td>
+<td>Data</td>
+<td>Data</td>
+</tr>
+<tr>
+<td>Data</td>
+<td>Data</td>
+<td>Data</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="component-section" data-name="Reveal Tables">
+<h2>Reveal Tables</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success add-item">Add Row</button> <button class="btn mb-1 btn-danger remove-item">Remove Row</button></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Reveal Table</button> <button class="btn mb-1 btn-outline-secondary copy-code">Reveal Table Code</button></div>
+</div>
+<div class="component-container">
+<div class="table-responsive row reveal-table">
+<table class="table"><caption contenteditable="true">Caption</caption>
+<thead>
+<tr>
+<th scope="row" contenteditable="true">Prompt</th>
+<th scope="row" contenteditable="true">Reveal Content</th>
+</tr>
+</thead>
+<tbody><!-- Rows will be added here dynamically --></tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="component-section" data-name="Click and Reveal">
+<h2>Click and Reveal</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success add-item">Add Reveal</button> <button class="btn mb-1 btn-danger remove-item">Remove Reveal</button></div>
+<div><span style="font-size: 1rem;" class="reveal-counter mx-3">Current reveals: <span id="reveal-count">1</span></span></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Click and Reveal</button> <button class="btn mb-1 btn-outline-secondary copy-code">Click and Reveal Code</button></div>
+</div>
+<div class="component-container"><!-- Reveal items will be added here --></div>
+</div>
+<div class="component-section" data-name="Timeline">
+<h2>Vertical Timeline</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success timeline-add">Add Entry</button></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Timeline</button> <button class="btn mb-1 btn-outline-secondary copy-code">Timeline Code</button></div>
+</div>
+<div id="timelineBuilder" class="component-container">
+<p class="text-muted small mb-2">Each entry becomes a node down the spine; fill date/title/text in D2L after pasting.</p>
+<div class="timeline-build-list"></div>
+</div>
+</div>
+<div class="component-section" data-name="Image Hotspots">
+<h2>Image Hotspots (DON'T USE)</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+<div class="d-flex align-items-center gap-2 flex-wrap"><input type="file" accept="image/*" class="form-control form-control-sm hotspot-file" style="max-width: 14rem;">
+<div class="d-flex align-items-center gap-2">
+<div class="form-check form-switch mb-0"><input class="form-check-input hotspot-grid" type="checkbox" id="hotspotGrid"><label class="form-check-label" for="hotspotGrid">Grid</label></div>
+<div class="form-check form-switch mb-0"><input class="form-check-input hotspot-snap" type="checkbox" id="hotspotSnap"><label class="form-check-label" for="hotspotSnap">Snap</label></div>
+<select class="form-select form-select-sm hotspot-step" style="width: auto;" title="Grid / snap step">
+<option value="5">5%</option>
+<option value="10" selected="selected">10%</option>
+<option value="20">20%</option>
+<option value="25">25%</option>
+</select></div>
+</div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Hotspots</button> <button class="btn mb-1 btn-outline-secondary copy-code">Hotspots Code</button></div>
+</div>
+<div id="hotspotBuilder" class="component-container">
+<p class="text-muted small mb-2">Load the real image, optionally turn on Grid/Snap, then click the image to drop a marker (drag to fine-tune). After pasting into D2L, replace the placeholder with the same image and edit each marker's text.</p>
+<div class="hotspot-stage">
+<div class="hotspot-image-wrap"></div>
+<div class="hotspot-empty">Load an image, then click to place markers.</div>
+</div>
+<div class="hotspot-marker-list mt-2"></div>
+</div>
+</div>
+<div class="component-section" data-name="Charts">
+<h2>Charts (DON'T USE)</h2>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex align-items-center gap-2"><select class="form-select form-select-sm w-auto chart-type-select">
+<option value="bar">Bar</option>
+<option value="line">Line</option>
+<option value="pie">Pie</option>
+<option value="doughnut">Doughnut</option>
+<option value="radar">Radar</option>
+<option value="polarArea">Polar Area</option>
+<option value="bubble">Bubble</option>
+<option value="scatter">Scatter</option>
+</select><button class="btn mb-1 btn-success chart-add-dataset">Add Dataset</button> <button class="btn mb-1 btn-danger chart-remove-dataset">Remove Dataset</button></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Chart</button> <button class="btn mb-1 btn-outline-secondary copy-code">Chart Code</button></div>
+</div>
+<div id="chartBuilder" class="component-container">
+<div class="mb-2"><label class="form-label small mb-1">Labels (comma-separated)</label> <input type="text" class="form-control form-control-sm chart-labels-input" value="Jan, Feb, Mar"></div>
+<div class="chart-datasets-list"></div>
+<div class="chart-preview-wrap mt-3" style="max-width: 600px;"><canvas class="chart-preview-canvas"></canvas></div>
+</div>
+</div>
+<div class="component-section" data-name="Knowledge Checks">
+<h2>Knowledge Checks (DON'T USE)</h2>
+<div class="kc-tool">
+<h3>Matching &amp; Categorise</h3>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success add-bin">Add Bin</button> <button class="btn mb-1 btn-danger remove-bin">Remove Bin</button> <span class="match-mode-label badge bg-secondary align-middle ms-2">Matching</span></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Matching</button> <button class="btn mb-1 btn-outline-secondary copy-code">Matching Code</button></div>
+</div>
+<div class="match-builder component-container" id="matchBuilder"></div>
+</div>
+<hr>
+<div class="kc-tool">
+<h3>Multiple Choice / Select All</h3>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div>
+<div class="btn-group btn-group-sm me-2" role="group"><input type="radio" class="btn-check" name="choiceMode" id="choiceSingle" value="single" checked="checked"> <label class="btn btn-outline-primary" for="choiceSingle">Single answer</label> <input type="radio" class="btn-check" name="choiceMode" id="choiceMulti" value="multi"> <label class="btn btn-outline-primary" for="choiceMulti">Select all</label></div>
+<button class="btn mb-1 btn-success choice-add-option">Add Option</button></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Choice</button> <button class="btn mb-1 btn-outline-secondary copy-code">Choice Code</button></div>
+</div>
+<div id="choiceBuilder" class="component-container">
+<p class="text-muted small mb-2">Tick the box beside each correct option. Question/option text is edited in D2L after pasting.</p>
+<div class="choice-build-list"></div>
+</div>
+</div>
+<hr>
+<div class="kc-tool">
+<h3>Fill in the Blank</h3>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="text-muted small">Write the sentence and blanks in D2L using <code>[[answer|synonym]]</code> syntax.</div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Fill-in-Blank</button> <button class="btn mb-1 btn-outline-secondary copy-code">Fill-in-Blank Code</button></div>
+</div>
+<div id="fitbBuilder" class="component-container"></div>
+</div>
+<hr>
+<div class="kc-tool">
+<h3>Ordering / Sequencing</h3>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div><button class="btn mb-1 btn-success ordering-add">Add Item</button></div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Ordering</button> <button class="btn mb-1 btn-outline-secondary copy-code">Ordering Code</button></div>
+</div>
+<div id="orderingBuilder" class="component-container">
+<p class="text-muted small mb-2">The order shown here is the correct answer. After pasting, fill each numbered slot in D2L with the text that belongs in that position; learners see them shuffled.</p>
+<div class="ordering-build-list"></div>
+</div>
+</div>
+<hr>
+<div class="kc-tool">
+<h3>Mark the Words</h3>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="text-muted small">Write the passage in D2L; wrap correct words in <code>*asterisks*</code>. Every word is selectable; starred ones are correct.</div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Mark Words</button> <button class="btn mb-1 btn-outline-secondary copy-code">Mark Words Code</button></div>
+</div>
+<div id="mtwBuilder" class="component-container"></div>
+</div>
+<hr>
+<div class="kc-tool">
+<h3>Word Bank (drag the words)</h3>
+<div class="section-header d-flex justify-content-between align-items-center mb-3">
+<div class="text-muted small">In D2L, mark blanks with <code>[[answer]]</code> and distractors with <code>[[+decoy]]</code>. All words share one bank.</div>
+<div><button class="btn mb-1 btn-secondary copy-wysiwyg">Word Bank</button> <button class="btn mb-1 btn-outline-secondary copy-code">Word Bank Code</button></div>
+</div>
+<div id="wordbankBuilder" class="component-container"></div>
+</div>
+</div>
+</div>
+<!-- Toast Notification -->
+<div class="toast-container position-fixed start-50 end-auto p-3" style="top: 10%;">
+<div id="liveToast" class="toast fade hide" role="alert" aria-live="assertive" aria-atomic="true">
+<div class="toast-header" style="padding: 0.5rem;"><strong id="toastIcon" class="me-auto"></strong> <strong class="me-auto" id="toastTitle">Notification</strong> <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close" style="color: white;"></button></div>
+<div class="toast-body" id="toastBody"></div>
+</div>
+</div>
+<div class="offcanvas offcanvas-end" id="iconSelectorOffcanvas" aria-labelledby="iconSelectorOffcanvasLabel" tabindex="-1">
+<div class="offcanvas-header">
+<h5 class="offcanvas-title" id="iconSelectorOffcanvasLabel">Select an Icon</h5>
+<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+<div class="offcanvas-body"><!-- Existing filter and color controls -->
+<div class="mb-1 d-flex align-items-center"><input type="text" class="form-control" id="iconFilter" placeholder="Filter icons...">
+<div class="form-check form-switch ms-3"><input class="form-check-input" type="checkbox" role="switch" id="iconFillToggle"> <label class="form-check-label" for="iconFillToggle">Hide filled icons</label></div>
+</div>
+<!-- Icon Library Tabs -->
+<div class="mb-3">
+<div class="btn-group w-100" role="group" aria-label="Icon library selection"><button type="button" class="btn btn-outline-primary active" data-library="bootstrap">Bootstrap</button> <button type="button" class="btn btn-outline-primary" data-library="healthicons">Health</button> <button type="button" class="btn btn-outline-primary" data-library="material-icons">Material Icons</button> <button type="button" class="btn btn-outline-primary" data-library="material-symbols">Material Symbols</button> <button type="button" class="btn btn-outline-primary" data-library="hugeicons">HugeIcons</button></div>
+</div>
+<!-- Color selection (existing) -->
+<div class="mb-3">
+<div class="btn-group" role="group" aria-label="Icon color selection"><button type="button" class="btn mb-1 btn-primary" data-color="primary">Primary (Default)</button> <button type="button" class="btn mb-1 btn-secondary" data-color="secondary">Secondary</button> <button type="button" class="btn mb-1 btn-tertiary" data-color="tertiary">Tertiary</button></div>
+</div>
+<div class="mb-2"><button type="button" class="btn btn-sm btn-outline-primary" id="randomIconsBtn">Show 10 Random Icons</button> <span id="iconCount" class="ms-2 text-muted"></span></div>
+<!-- Dynamic Icon Grid -->
+<div class="icon-grid gap-2" id="iconGrid"><!-- Icons will be populated here dynamically --></div>
+</div>
+</div>
+<div class="offcanvas offcanvas-end" id="imagePickerOffcanvas" aria-labelledby="imagePickerOffcanvasLabel" tabindex="-1">
+<div class="offcanvas-header">
+<h5 class="offcanvas-title" id="imagePickerOffcanvasLabel">Image Picker</h5>
+<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+<div class="offcanvas-body">
+<p style="font-size: 1rem;">This selector collates images from pexels, unsplash and pixabay. All can be used without attribution.</p>
+<p style="font-size: 1rem;">There may be a slight delay while the image is compressed, resized and copied to the clipboard. It can then be pasted into an image placeholder on your course page.</p>
+<div class="mb-3"><input type="text" class="form-control" id="searchInput" placeholder="Search for images..."> <button class="btn mb-1 btn-primary mt-auto" id="searchButton">Search</button></div>
+<a target="_blank" href="https://elements.envato.com/collections/TXGF2US8ZB?utm_source=my_collection&amp;utm_medium=link&amp;utm_campaign=share_collection" rel="noopener">Envato Coatless Doctors</a>
+<div class="image-results" id="imageResults"><!-- Images will be displayed here --></div>
+<h5>Note</h5>
+<ul>
+<li>The image picker copies an image directly to the clipboard. There may be a slight delay as it compresses the file.</li>
+<li>This can be used to replace the image in placeholder by:</li>
+<ul>
+<li>Clicking on the image placeholder in the course page.</li>
+<li>Pressing Ctrl+V (or Cmd+V on Mac) to paste the image.</li>
+</ul>
+<li>You may also delete the placeholder image by clicking the image and pressing backspace or delete ONCE. Then Ctrl+V to paste the new image.</li>
+<li>Header images will be cropped to a 4:1 ratio (eg. 1920px x 480px)</li>
+</ul>
+</div>
+</div>
+<div class="offcanvas offcanvas-end" id="instructionsOffcanvas" aria-labelledby="instructionsOffcanvasLabel" tabindex="-1">
+<div class="offcanvas-header">
+<h5 class="offcanvas-title" id="instructionsOffcanvasLavel">Instructions</h5>
+<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+<div class="offcanvas-body">
+<div class="mb-3">
+<p>Open this tool in a different tab or window to the course you're working on.</p>
+<h3>Colour Theme</h3>
+<p>Use the colour template button if you want to change the theme colors.</p>
+<ul>
+<li>You may then paste the code into the HTML view of the your page. The HTML view should be EMPTY before pasting.</li>
+</ul>
+<h3>Rows</h3>
+<ul>
+<li>Every pasted item should be within a content row in your html page.</li>
+<li>Use the row buttons at the top to copy more rows for your HTML page. These can be pasted directly next to the + icons in your html page.</li>
+</ul>
+<h3>Components</h3>
+<ol>
+<li>Use the drop-down or filter to find your desired interaction.</li>
+<li>Use the buttons to add items, rows and columns or change icons as needed.</li>
+<li>Use the copy WYSIWYG or copy code button to copy the interaction to the clipboard.</li>
+<li>Go to the course page and paste into a content row. If you copied the HTML code you will need to use the HTML view.</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="offcanvas offcanvas-end" id="colorSelectorOffcanvas" aria-labelledby="colorSelectorOffcanvasLabel" tabindex="-1">
+<div class="offcanvas-header">
+<h5 class="offcanvas-title" id="colorSelectorOffcanvasLabel">Select Theme Colors</h5>
+<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+<div class="offcanvas-body">
+<div class="mb-3"><label for="primaryColorSelect" class="form-label">Primary Color</label><select class="form-select" id="primaryColorSelect">
+<option value="navy">Navy</option>
+<option value="purple">Purple</option>
+<option value="gold">Gold</option>
+<option value="lightblue">Light Blue</option>
+<option value="yellow">Yellow</option>
+<option value="red">Red</option>
+<option value="forest">Forest</option>
+<option value="lavender">Lavender</option>
+<option value="green">Green</option>
+</select></div>
+<div class="mb-3"><label for="secondaryColorSelect" class="form-label">Secondary Color</label><select class="form-select" id="secondaryColorSelect">
+<option value="navy">Navy</option>
+<option value="purple">Purple</option>
+<option value="gold">Gold</option>
+<option value="lightblue">Light Blue</option>
+<option value="yellow">Yellow</option>
+<option value="red">Red</option>
+<option value="forest">Forest</option>
+<option value="lavender">Lavender</option>
+<option value="green">Green</option>
+</select></div>
+<div class="mb-3"><label for="tertiaryColorSelect" class="form-label">Tertiary Color</label><select class="form-select" id="tertiaryColorSelect">
+<option value="navy">Navy</option>
+<option value="purple">Purple</option>
+<option value="gold">Gold</option>
+<option value="lightblue">Light Blue</option>
+<option value="yellow">Yellow</option>
+<option value="red">Red</option>
+<option value="forest">Forest</option>
+<option value="lavender">Lavender</option>
+<option value="green">Green</option>
+</select></div>
+<button class="btn btn-outline-primary" id="copyTemplateBtn">Copy Template Code</button> <button class="btn btn-outline-secondary me-2" id="copyStyleBtn">Copy Style Only</button></div>
+</div>
+<div class="offcanvas offcanvas-start" id="quickSelectOffcanvas" aria-labelledby="quickSelectOffcanvasLabel" style="width: 100%;" tabindex="-1">
+<div class="offcanvas-header">
+<h5 class="offcanvas-title" id="quickSelectOffcanvasLabel">Component Quick Select</h5>
+<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+<div class="offcanvas-body"><button type="button" class="btn btn-sm btn-outline-primary mb-2" id="copyOneOfEverythingBtn">Copy One of Everything</button>
+<div id="quickSelectList" style="overflow-y: auto; font-size: 0.9rem;"></div>
+</div>
+</div>
+</div>
+<!-- JavaScript --></body></html>
