@@ -1,4 +1,4 @@
-// utils.js — v1.2 (2026-09-17)
+// utils.js — v1.3 (2026-10-12)
 let headerStyle = 0;
 
 // Color Template Functionality
@@ -4800,6 +4800,19 @@ function updateTextCarouselIds(htmlString) {
   // Clone the container to avoid modifying the original
   const containerClone = container.cloneNode(true);
   stripRuntimeArtifacts(containerClone);
+  // Learner-runtime artifacts added to the live preview must not reach the
+  // exported markup: scroll arrow + .table-scroll-wrap wrapper, fade-in,
+  // and the builder-only row class and placeholder comment.
+  containerClone.querySelectorAll('.scroll-arrow').forEach(el => el.remove());
+  containerClone.querySelectorAll('.table-scroll-wrap').forEach(wrap => {
+    while (wrap.firstChild) wrap.parentNode.insertBefore(wrap.firstChild, wrap);
+    wrap.remove();
+  });
+  containerClone.querySelectorAll('.reveal-table').forEach(el => el.classList.remove('row', 'fade-in'));
+  const commentWalker = document.createTreeWalker(containerClone, NodeFilter.SHOW_COMMENT);
+  const comments = [];
+  while (commentWalker.nextNode()) comments.push(commentWalker.currentNode);
+  comments.forEach(c => c.remove());
   containerClone.querySelectorAll('td > div').forEach(el => el.setAttribute('contenteditable', 'true'));
   containerClone.querySelectorAll('.collapse div, .collapse span').forEach(el => {
     if (el.hasAttribute('contenteditable')) el.setAttribute('contenteditable', 'true');
