@@ -1,5 +1,5 @@
 /* -------------------------------------------------------------------------- */
-/* bootstrap-custom-cleanup.js — v1.4 (2026-10-12)                           */
+/* bootstrap-custom-cleanup.js — v1.6 (2026-10-13)                           */
 /* -------------------------------------------------------------------------- */
 /* Purpose                                                                    */
 /* Shared runtime for RCPI / Brightspace template enhancements.               */
@@ -212,7 +212,12 @@
       if (!panel) return;
       panel.classList.add('collapse');
       panel.classList.toggle('show', expanded);
-      panel.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+      /* No aria-hidden here: .collapse:not(.show) is display:none, which
+         already hides a closed panel from assistive tech. Bootstrap never
+         clears aria-hidden when it expands a panel, so setting it left
+         expanded content invisible to screen readers. Also strips the stale
+         value from existing markup. */
+      panel.removeAttribute('aria-hidden');
     }
 
     qsa(root, '.accordion .accordion-item').forEach(function (item) {
@@ -280,13 +285,13 @@
         trigger.classList.contains('collapsed') &&
         trigger.getAttribute('aria-expanded') === 'false' &&
         !panel.classList.contains('show') &&
-        panel.getAttribute('aria-hidden') === 'true';
+        !panel.hasAttribute('aria-hidden');
       if (alreadyCollapsed) return;
       trigger.classList.add('collapsed');
       trigger.setAttribute('aria-expanded', 'false');
       panel.classList.add('collapse');
       panel.classList.remove('show');
-      panel.setAttribute('aria-hidden', 'true');
+      panel.removeAttribute('aria-hidden');
     }
 
     qsa(root, '.accordion .accordion-item').forEach(function (item) {
@@ -624,8 +629,8 @@
         '.flip-card{position:relative}' +
         '.flip-card-toggle{position:absolute;bottom:.25rem;right:.25rem;z-index:2;width:2.75rem;height:2.75rem;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer}' +
         '.flip-card.flipped>.flip-card-toggle{right:auto;left:.25rem}' +
-        '.flip-card-toggle:focus{outline:none}' +
-        '.flip-card-toggle:focus-visible{box-shadow:0 0 0 2px #fff,0 0 0 5px #000}';
+        '.flip-card-toggle:focus,.flip-card-toggle:focus-visible{outline:none;box-shadow:none}' +
+        '.flip-card:has(>.flip-card-toggle:focus-visible){outline:3px solid #000;outline-offset:2px;border-radius:var(--bs-border-radius)}';
       document.head.appendChild(css);
     }
 
@@ -771,7 +776,11 @@
               caption.style.margin = '0 auto';
             });
           } else {
-            carousel.style.overflow = 'hidden';
+            /* Clear, don't force 'hidden': the indicators sit at top:-1rem,
+               partly outside the carousel box, so overflow:hidden clipped
+               them. This branch also runs for every carousel whenever any
+               one enters or leaves fullscreen. */
+            carousel.style.overflow = '';
             qsa(carousel, '.carousel-image img').forEach(function (img) {
               img.style.maxHeight = '';
               img.style.height = '';
@@ -1335,11 +1344,69 @@
     state.referencesReady = true;
   }
 
+  /* Tab keyboard access. Panels get tabindex=0 so Tab from the tab list lands
+     in the content (ARIA Authoring Practices pattern). Bootstrap also treats
+     Up/Down as tab switching on every tab list, which traps a screen reader
+     user in focus mode on horizontal tabs, so there Down moves into the active
+     panel instead. Vertical tab lists keep Up/Down for switching. */
+  function initTabAccess(root) {
+    qsa(root, '.tab-pane[role="tabpanel"]').forEach(function (pane) {
+      if (!pane.hasAttribute('tabindex')) pane.setAttribute('tabindex', '0');
+    });
+
+    if (document.documentElement.dataset.bbTabAccessReady === '1') return;
+    document.documentElement.dataset.bbTabAccessReady = '1';
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'ArrowDown' || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      var tab = event.target && event.target.closest ? event.target.closest('[role="tab"]') : null;
+      if (!tab) return;
+      var list = tab.closest('[role="tablist"]');
+      if (!list) return;
+      if (list.getAttribute('aria-orientation') === 'vertical' ||
+          list.classList.contains('flex-column') ||
+          list.closest('.vertical-tabs-wrapper')) return;
+
+      var sel = tab.getAttribute('data-bs-target') || tab.getAttribute('href');
+      var pane = null;
+      if (sel && sel.charAt(0) === '#') pane = document.getElementById(sel.slice(1));
+      if (!pane && tab.getAttribute('aria-controls')) pane = document.getElementById(tab.getAttribute('aria-controls'));
+      if (!pane || !pane.classList.contains('active')) return;
+
+      if (!pane.hasAttribute('tabindex')) pane.setAttribute('tabindex', '0');
+      event.preventDefault();
+      event.stopPropagation();
+      pane.focus();
+    }, true);
+  }
+
   function initCarouselNextLabels(root) {
     qsa(root, '.carousel').forEach(function (carouselEl) {
       if (!ensureOnce(carouselEl, 'bbCarouselLabelReady')) return;
       var items = qsa(carouselEl, '.carousel-item');
       if (!items.length) return;
+      /* Slides sit before the Next button in the DOM, so a screen reader user
+         had to arrow back up after every press. After a slide change that the
+         user started from a control (Next, Previous, indicator), focus moves
+         to the new slide so reading continues from its content. Auto-rotation
+         never steals focus: it only fires when focus is already on a control
+         inside this carousel. */
+      if (!document.getElementById('bb-carousel-a11y-css')) {
+        var cs = document.createElement('style');
+        cs.id = 'bb-carousel-a11y-css';
+        cs.textContent = '.carousel-item[tabindex="-1"]:focus{outline:none}' +
+          '.carousel-item[tabindex="-1"]:focus-visible{outline:3px solid #000;outline-offset:-3px}';
+        document.head.appendChild(cs);
+      }
+      carouselEl.addEventListener('slid.bs.carousel', function (e) {
+        var focused = document.activeElement;
+        if (!focused || !carouselEl.contains(focused)) return;
+        if (focused.closest('.carousel-inner')) return;
+        var slide = e.relatedTarget || carouselEl.querySelector('.carousel-item.active');
+        if (!slide) return;
+        if (!slide.hasAttribute('tabindex')) slide.setAttribute('tabindex', '-1');
+        slide.focus({ preventScroll: true });
+      });
       var nextBtn = carouselEl.querySelector('.carousel-control-next, .text-carousel-control-next');
       var nextHidden = nextBtn ? nextBtn.querySelector('.visually-hidden') : null;
 
@@ -2762,6 +2829,7 @@
     initNewTabNotes(root);
     initCarouselNextLabels(root);
     initTabPanelNav(root);
+    initTabAccess(root);
     initInputBlocks(root);
     initMatchWidgets(root);
     initChoiceAndFitb(root);
