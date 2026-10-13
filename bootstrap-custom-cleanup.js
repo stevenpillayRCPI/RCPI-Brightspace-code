@@ -1,5 +1,5 @@
 /* -------------------------------------------------------------------------- */
-/* bootstrap-custom-cleanup.js — v1.3 (2026-10-08)                           */
+/* bootstrap-custom-cleanup.js — v1.4 (2026-10-12)                           */
 /* -------------------------------------------------------------------------- */
 /* Purpose                                                                    */
 /* Shared runtime for RCPI / Brightspace template enhancements.               */
@@ -590,22 +590,101 @@
   /* Generic interaction helpers — start                                      */
   /* ------------------------------------------------------------------------ */
 
-  function initFlipCards() {
+  var flipCardUid = 0;
+
+  function setFlipFaceHidden(face, hidden) {
+    if (!face) return;
+    if (hidden) {
+      face.setAttribute('aria-hidden', 'true');
+      face.setAttribute('inert', '');
+    } else {
+      face.removeAttribute('aria-hidden');
+      face.removeAttribute('inert');
+    }
+  }
+
+  // Single source of truth for a card's flipped state: class, toggle button
+  // state, and which face is exposed to assistive tech and keyboard focus.
+  function setFlipState(card, flipped) {
+    card.classList.toggle('flipped', flipped);
+    if (card.dataset.bbFlipA11y !== '1') return;
+    var btn = card.querySelector(':scope > .flip-card-toggle');
+    if (btn) btn.setAttribute('aria-pressed', flipped ? 'true' : 'false');
+    setFlipFaceHidden(card.querySelector('.flip-card-front'), flipped);
+    setFlipFaceHidden(card.querySelector('.flip-card-back'), !flipped);
+  }
+
+  // Applies to every card in the DOM, new or historical: no markup changes
+  // are needed in saved pages. Skips cards still in the editor "show" layout.
+  function enhanceFlipCards(root) {
+    if (!document.getElementById('bb-flip-card-a11y-css')) {
+      var css = document.createElement('style');
+      css.id = 'bb-flip-card-a11y-css';
+      css.textContent =
+        '.flip-card{position:relative}' +
+        '.flip-card-toggle{position:absolute;bottom:.25rem;right:.25rem;z-index:2;width:2.75rem;height:2.75rem;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer}' +
+        '.flip-card.flipped>.flip-card-toggle{right:auto;left:.25rem}' +
+        '.flip-card-toggle:focus{outline:none}' +
+        '.flip-card-toggle:focus-visible{box-shadow:0 0 0 2px #fff,0 0 0 5px #000}';
+      document.head.appendChild(css);
+    }
+
+    qsa(root, '.flip-card').forEach(function (card) {
+      if (card.dataset.bbFlipA11y === '1' || card.classList.contains('show')) return;
+      card.dataset.bbFlipA11y = '1';
+
+      // Name the group from the front title; make that id unique on the page
+      // (builders number cards from 0, so separate sets can collide).
+      var title = card.querySelector('.flip-card-front h3');
+      if (title) {
+        var id = title.id;
+        if (!id || document.querySelectorAll('[id="' + id.replace(/"/g, '\\"') + '"]').length > 1) {
+          id = 'flip-card-title-bb' + (++flipCardUid);
+          title.id = id;
+        }
+        card.setAttribute('aria-labelledby', id);
+        card.setAttribute('role', 'group');
+      }
+
+      // aria-label and tabindex on a plain div exposed no role or state.
+      var inner = card.querySelector('.flip-card-inner');
+      if (inner) {
+        inner.removeAttribute('aria-label');
+        inner.removeAttribute('tabindex');
+      }
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'flip-card-toggle';
+      btn.setAttribute('aria-label', 'Flip card');
+      card.insertBefore(btn, card.firstChild);
+
+      setFlipState(card, card.classList.contains('flipped'));
+    });
+  }
+
+  function initFlipCards(root) {
+    enhanceFlipCards(root || document);
+
     if (document.documentElement.dataset.bbFlipCardsReady === '1') return;
     document.documentElement.dataset.bbFlipCardsReady = '1';
 
+    // Mouse and keyboard activation of the toggle button both arrive here as
+    // click events, so no separate keydown handling is needed for it.
     document.addEventListener('click', function (event) {
       var card = event.target.closest('.flip-card');
       if (!card) return;
-      card.classList.toggle('flipped');
+      setFlipState(card, !card.classList.contains('flipped'));
     });
 
+    // Fallback for any card that was not enhanced (still has the old
+    // focusable inner div).
     document.addEventListener('keydown', function (event) {
-      var card = event.target.closest('.flip-card');
-      if (!card) return;
+      if (!event.target.matches || !event.target.matches('.flip-card-inner[tabindex]')) return;
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        card.classList.toggle('flipped');
+        var card = event.target.closest('.flip-card');
+        if (card) setFlipState(card, !card.classList.contains('flipped'));
       }
     });
   }
@@ -2669,7 +2748,7 @@
     cleanupSingleItemAccordionButtons(root);
     initInstructionText(root);
     initAccordions(root);
-    initFlipCards();
+    initFlipCards(root);
     initCarouselFullscreen(root);
     initCarouselImageZoom(root);
     initStandaloneImageFullscreen(root);
