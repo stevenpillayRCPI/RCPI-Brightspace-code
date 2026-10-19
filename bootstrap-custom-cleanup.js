@@ -1,5 +1,5 @@
 /* -------------------------------------------------------------------------- */
-/* bootstrap-custom-cleanup.js — v1.6 (2026-10-13)                           */
+/* bootstrap-custom-cleanup.js — v1.7 (2026-10-19)                           */
 /* -------------------------------------------------------------------------- */
 /* Purpose                                                                    */
 /* Shared runtime for RCPI / Brightspace template enhancements.               */
@@ -640,7 +640,7 @@
 
       // Name the group from the front title; make that id unique on the page
       // (builders number cards from 0, so separate sets can collide).
-      var title = card.querySelector('.flip-card-front h3');
+      var title = card.querySelector('.flip-card-front :is(h1,h2,h3,h4,h5,h6)');
       if (title) {
         var id = title.id;
         if (!id || document.querySelectorAll('[id="' + id.replace(/"/g, '\\"') + '"]').length > 1) {
