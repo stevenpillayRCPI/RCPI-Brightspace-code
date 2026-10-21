@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<!-- RCPI-Interactive-Builder.html v1.7 (2026-10-21) -->
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RCPI Interactive Builder</title>
+
+  <link rel="stylesheet" href="/shared/HTML-Template-Library/Templates2025/bootstrap.css">
+  <script defer src="/shared/HTML-Template-Library/Templates2025/bootstrap.bundle.js"></script>
+  <script defer src="/shared/HTML-Template-Library/Templates2025/rcpi-interactives.js"></script>
+
+  <!-- Local testing: swap the three lines above for these
+  <link rel="stylesheet" href="bootstrap.css">
+  <script defer src="bootstrap.bundle.js"></script>
+  <script defer src="rcpi-interactives.js"></script>
+  -->
+
+<style>
+  :root {
+    --bs-primary: var(--bs-navy);
+    --bs-secondary: var(--bs-purple);
+    --bs-tertiary: var(--bs-gold);
+    --bs-primary-lightness: var(--bs-navy-lightness);
+    --bs-secondary-lightness: var(--bs-purple-lightness);
+    --bs-tertiary-lightness: var(--bs-gold-lightness);
+  }
+  .component-section > h2 {
+    color: white;
+    background-color: #002d72;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    margin-right: 1rem;
+  }
+  hr { border: 2px dotted var(--bs-tertiary); opacity: 1; }
+  .component-section { margin-bottom: 3rem; }
+
+  /* The wrapper row is the sticky element and sits above all page content (below offcanvas 1045 and toast).
+     bootstrap.css gives .row a transform, which makes it its own stacking context, so it needs an explicit z-index. */
+  #topBar { position: sticky; top: 0; z-index: 1030; background: white; }
+  .row-controls-sticky {
+    position: static; background: white; border-bottom: 1px solid #dee2e6;
+    margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  .row-controls-sticky .btn.sticky-btn { margin: 0 !important; }
+  .row-controls-sticky > .d-flex { padding: 0.5rem; }
+
+  .creator-component-nav-overlay { position: relative; display: inline-block; }
+  .creator-nav-dropdown {
+    position: absolute; top: 100%; left: 0; background: white; border: 1px solid #dee2e6;
+    border-radius: 0.375rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); display: none;
+    margin-top: 0.25rem; min-width: 250px; max-width: 300px; z-index: 1040;
+  }
+  .creator-nav-dropdown.show { display: block; }
+  .creator-nav-grid { padding: 0.5rem; max-height: 400px; overflow-y: auto; }
+  .creator-nav-item {
+    display: block; width: 100%; padding: 0.5rem 0.75rem; border: none; background: none;
+    text-align: left; font-size: 0.875rem; border-radius: 0.25rem; margin-bottom: 0.125rem; cursor: pointer;
+  }
+  .creator-nav-item:hover { background-color: #f8f9fa; }
+  .creator-nav-item[aria-current=true] { background-color: #e7eefb; font-weight: 700; }
+
+  .ix-card { border: 1px solid #c8d0dc; border-radius: .5rem; padding: .75rem; margin-bottom: .75rem; background: #fff; }
+  .ix-card.ix-sub { background: #f8f9fb; }
+  .ix-preview-wrap { border: 2px dashed #8a97ab; border-radius: .5rem; padding: 1rem; margin-top: 1rem; }
+  .ix-preview-label { font-size: .875rem; font-weight: 600; color: #4a5568; margin-bottom: .5rem; }
+  .ix-warn { margin: .5rem 0 0; padding-left: 1.25rem; font-size: .9rem; }
+  .ix-id { font-size: .9rem; }
+  .ix-hs-stage { position: relative; display: inline-block; max-width: 100%; cursor: crosshair; }
+  .ix-hs-stage img { display: block; max-width: 100%; height: auto; }
+  .ix-marker {
+    position: absolute; transform: translate(-50%, -50%); width: 2rem; height: 2rem; border-radius: 50%;
+    border: 2px solid #fff; background: #002d72; color: #fff; font-weight: 700; padding: 0; cursor: grab;
+    box-shadow: 0 1px 4px rgba(0,0,0,.5); touch-action: none; line-height: 1;
+  }
+  .ix-marker:active { cursor: grabbing; }
+  .form-label.small { margin-bottom: .15rem; }
+
+  /* Compact editor: scoped to .ix-edit so the live preview keeps learner-page sizing */
+  .ix-edit { font-size: .9rem; line-height: 1.45; }
+  .ix-edit input, .ix-edit button, .ix-edit select, .ix-edit textarea, .ix-edit p, .ix-edit fieldset, .ix-edit ul, .ix-edit ol { margin-bottom: 0; }
+  .ix-edit .mb-2 { margin-bottom: .6rem !important; }
+  .ix-edit .mb-3 { margin-bottom: .8rem !important; }
+  .ix-edit .form-label { font-size: .82rem; margin-bottom: .2rem; }
+  .ix-edit .form-text, .ix-edit .text-muted.small { font-size: .78rem; margin-top: .2rem; }
+  .ix-edit .form-control, .ix-edit .form-select { font-size: .9rem; padding: .3rem .55rem; min-height: 0; }
+  .ix-edit .btn { font-size: .82rem; padding: .22rem .6rem; }
+  .ix-edit .form-check { margin-bottom: .4rem !important; min-height: 0; }
+  .ix-edit .ix-card { padding: .75rem; margin-bottom: .65rem; }
+  .ix-edit .ix-card summary { font-size: .9rem; }
+  .ix-edit .badge { font-size: .78rem; }
+    .ix-edit .ix-warn { font-size: .85rem; margin-top: .4rem; }
+  .ix-edit .ix-id { font-size: .85rem; }
+  .ix-edit li { margin: 0 0 .1rem; padding: 0; opacity: 1 !important; animation: none !important; }
+  .ix-edit li::before { content: none !important; }
+  .ix-edit .ix-warn { list-style: disc; }
+  .ix-edit .ix-hs-stage { max-width: 28rem; }
+  .component-section { margin-bottom: 1.5rem; }
+  @media (min-width: 1400px) { .container { max-width: 1500px; } }
+
+  /* Editor on the left, sticky preview on the right (stacked on narrow screens) */
+  .ix-layout { display: block; }
+  @media (min-width: 1100px) {
+    .ix-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+    .ix-right { position: sticky; top: 4.75rem; max-height: calc(100vh - 5.5rem); overflow: auto; }
+  }
+  .ix-right .ix-preview-wrap { margin-top: .5rem; }
+
+  /* Readability */
+  .ix-edit .form-label { font-weight: 600; color: #1b2a41; }
+  .ix-edit .form-text, .ix-edit .text-muted.small { color: #44505f !important; }
+  .ix-edit .form-control, .ix-edit .form-select { border-color: #6b7a90; color: #111827; }
+  .ix-edit .form-control.ix-q { font-size: 1rem; font-weight: 500; border: 2px solid #002d72; padding: .45rem .6rem; }
+  .ix-edit .ix-card summary { font-weight: 700; color: #002d72; }
+  .ix-ansrow { display: flex; align-items: center; gap: .5rem; }
+  .ix-ansrow .ix-anstext { flex: 1 1 auto; min-width: 0; }
+  .ix-ansrow .ix-num { flex: 0 0 auto; font-weight: 700; color: #002d72; min-width: 1.4rem; }
+  .ix-ansrow .form-check { flex: 0 0 auto; margin: 0 !important; white-space: nowrap; }
+  .ix-ansfb { margin-top: .5rem; }
+  .ix-edit .ix-ansrow .btn.btn-secondary, .ix-edit .ix-ansrow .btn[aria-expanded=true] { background: #e7eefb; color: #002d72 !important; border-color: #002d72; }
+  .ix-edit .ix-ansrow .btn:hover, .ix-edit .ix-ansrow .btn:focus { background: #d4e0f7; color: #002d72 !important; border-color: #002d72; }
+  .ix-edit .ix-ansrow .btn.btn-outline-danger:hover { background: #f8d7da; color: #842029 !important; border-color: #842029; }
+  .ix-edit .form-check-label { color: #1b2a41; }
+  .ix-warnwrap > summary { cursor: pointer; font-weight: 600; color: #842029; }
+  .ix-warnwrap { margin-bottom: .25rem; }
+
+  .component-section > h2 { font-size: 1.4rem; padding: .35rem .75rem; margin-bottom: .6rem; }
+  .ix-preview-wrap { padding: .75rem; margin-top: .6rem; }
+
+</style>
+</head>
+<body>
+<div class="container mt-4">
+
+  <div class="row wysiwyg-mode" id="topBar">
+    <div class="row-controls-sticky">
+      <div class="d-flex justify-content-between align-items-center flex-nowrap" style="padding: 0.5rem 0;">
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+          <div class="creator-component-nav-overlay">
+            <button id="navToggle" class="btn btn-sm btn-outline-primary sticky-btn" type="button" aria-expanded="false" aria-controls="navDropdown">Item:&nbsp;<span id="navLabel">Presentation</span>&nbsp;&#9662;</button>
+            <div class="creator-nav-dropdown" id="navDropdown"><div class="creator-nav-grid" id="dynamicNavItems"></div></div>
+          </div>
+          <input type="text" id="componentFilter" class="form-control form-control-sm mb-0" placeholder="Search..." aria-label="Search the item list" style="width: 6rem; min-width: 4rem;">
+        </div>
+        <div class="d-flex gap-1 flex-shrink-0">
+          <button class="btn btn-secondary btn-sm sticky-btn text-nowrap" id="copyNewRow" type="button">1 Row</button>
+          <button class="btn btn-secondary btn-sm sticky-btn text-nowrap" id="copy10Rows" type="button">10 Rows</button>
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-shrink-0">
+          <div class="form-check form-switch mb-0 text-nowrap"><input class="form-check-input" type="checkbox" role="switch" id="obfToggle" checked><label class="form-check-label small" for="obfToggle">Obscure answers</label></div>
+          <button class="btn btn-sm btn-primary sticky-btn text-nowrap" type="button" data-bs-toggle="offcanvas" data-bs-target="#loadOffcanvas">Load</button>
+          <button class="btn btn-sm btn-primary sticky-btn text-nowrap" type="button" data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas">Help</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row wysiwyg-mode"><div class="col-12">
+    <p>Note: Do not use edit mode on this page. Work is autosaved in this browser. Use Copy JSON to keep a copy.</p>
+  </div></div>
+
+  <div class="component-section" data-name="Presentation" id="sec-presentation"><h2>Presentation</h2></div>
+  <div class="component-section" data-name="Multiple Choice" id="sec-mcq"><h2>Multiple Choice</h2></div>
+  <div class="component-section" data-name="Question Set" id="sec-questionset"><h2>Question Set</h2></div>
+  <div class="component-section" data-name="Image Hotspots" id="sec-hotspots"><h2>Image Hotspots</h2></div>
+  <div class="component-section" data-name="Media" id="sec-media"><h2>Media (audio and video)</h2></div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast-container position-fixed start-50 end-auto p-3" style="top: 10%; z-index: 2000;">
+  <div id="liveToast" class="toast fade hide" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header" style="padding: 0.5rem;">
+      <strong id="toastTitle" class="me-auto">Notification</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body" id="toastBody"></div>
+  </div>
+</div>
+
+<!-- Load -->
+<div class="offcanvas offcanvas-end" id="loadOffcanvas" aria-labelledby="loadOffcanvasLabel" tabindex="-1" style="width: 32rem; max-width: 100%;">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="loadOffcanvasLabel">Load an existing item</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <p>Paste an item's JSON, or the HTML of a page or item from a course (HTML view). Every item found is loaded into its section. If a page has several items of one type, only the first loads, so paste the others separately. The item loads into its section for editing and replaces what is currently in that section.</p>
+    <label class="form-label" for="loadText">Item JSON or HTML</label>
+    <textarea id="loadText" class="form-control mb-2" rows="10"></textarea>
+    <button type="button" class="btn btn-primary" id="loadBtn">Load</button>
+  </div>
+</div>
+
+<!-- Help -->
+<div class="offcanvas offcanvas-end" id="helpOffcanvas" aria-labelledby="helpOffcanvasLabel" tabindex="-1">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="helpOffcanvasLabel">Instructions</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <p>Open this tool in a different tab or window to the course you're working on.</p>
+    <h3>Building</h3>
+    <ol>
+      <li>Choose an item type from the Item menu at the top (or type in the search box and press Enter). Only that item shows.</li>
+      <li>Fill in the form. The live preview updates as you type.</li>
+      <li>Set the item ID fields (descriptor, module, week, page, number).</li>
+      <li>Use the copy button, then paste into a content row on your course page. Use the code button if you are pasting into the HTML view.</li>
+    </ol>
+    <h3>Notes</h3>
+    <ul>
+      <li>The item shows as a grey placeholder in the editor and runs in the learner view.</li>
+      <li>The runtime file <code>rcpi-interactives.js</code> must be loaded by the course template.</li>
+      <li>Hotspot placement: load the real image from your computer to place icons. It is only used for placement. The image URL field is what the learner sees.</li>
+      <li>Copied item code hides correct answers and answer feedback (switch at the top). This only stops casual viewing of the page code. Anyone who can read the page code and script can decode them. JSON copies are always readable, so keep them private.</li>
+      <li>Audio needs a transcript. Video and audio from the media library need their URL (direct file or embed).</li>
+      <li>Your work autosaves in this browser only. Use Copy JSON, then Paste JSON or Load, to move work between computers.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var IX = window.RCPIInteractives;
+  var STORE_KEY = 'rcpi-ix-builder-v1';
+  var fieldSeq = 0;
+
+  /* ------------------------------ DOM helpers ----------------------------- */
+
+  function h(tag, attrs) {
+    var n = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v == null || v === false) return;
+      if (k === 'class') n.className = v;
+      else if (k === 'text') n.textContent = v;
+      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), v);
+      else if (k === 'for' || k.indexOf('-') > -1) n.setAttribute(k, v === true ? '' : v);
+      else if (k in n) n[k] = v;
+      else n.setAttribute(k, v === true ? '' : v);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null) continue;
+      if (Array.isArray(c)) c.forEach(function (x) { if (x != null) n.appendChild(typeof x === 'string' ? document.createTextNode(x) : x); });
+      else n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    }
+    return n;
+  }
+
+  function field(label, control, hint) {
+    var id = 'f' + (++fieldSeq);
+    control.id = id;
+    var wrap = h('div', { class: 'mb-2' }, h('label', { class: 'form-label small', for: id, text: label }), control);
+    if (hint) wrap.appendChild(h('div', { class: 'form-text', text: hint }));
+    return wrap;
+  }
+
+  function textInput(obj, key, c, o) {
+    o = o || {};
+    var ctl = h(o.area ? 'textarea' : 'input', {
+      class: 'form-control form-control-sm',
+      type: o.area ? null : 'text',
+      rows: o.rows || 3,
+      placeholder: o.ph || '',
+      oninput: function () { obj[key] = this.value; c.changed(); }
+    });
+    ctl.value = obj[key] == null ? '' : obj[key];
+    return ctl;
+  }
+
+  function numInput(obj, key, c, o) {
+    var ctl = h('input', {
+      class: 'form-control form-control-sm', type: 'number', min: o.min, max: o.max, step: o.step,
+      oninput: function () { var v = parseFloat(this.value); obj[key] = isNaN(v) ? 0 : v; c.changed(); },
+      onchange: function () { c.rerender(); }
+    });
+    ctl.value = obj[key];
+    return ctl;
+  }
+
+  function selectInput(obj, key, options, c, rerender) {
+    var ctl = h('select', { class: 'form-select form-select-sm', onchange: function () { obj[key] = this.value; if (rerender) c.rerender(); else c.changed(); } },
+      options.map(function (o) { return h('option', { value: o[0], text: o[1] }); }));
+    ctl.value = obj[key];
+    return ctl;
+  }
+
+  function checkbox(obj, key, label, c, rerender) {
+    var id = 'f' + (++fieldSeq);
+    var cb = h('input', { class: 'form-check-input', type: 'checkbox', id: id, checked: !!obj[key], onchange: function () { obj[key] = this.checked; if (rerender) c.rerender(); else c.changed(); } });
+    return h('div', { class: 'form-check mb-2' }, cb, h('label', { class: 'form-check-label', for: id, text: label }));
+  }
+
+  function btn(text, cls, onclick, label) {
+    return h('button', { type: 'button', class: 'btn btn-sm ' + cls, text: text, onclick: onclick, 'aria-label': label || null });
+  }
+
+  function moveBtns(arr, i, c, noun, compact) {
+    if (compact) {
+      return h('div', { class: 'd-flex gap-1 flex-shrink-0' },
+        btn('\u2191', 'btn-outline-secondary', function () { if (i > 0) { var t = arr[i]; arr[i] = arr[i - 1]; arr[i - 1] = t; c.rerender(); } }, 'Move ' + noun + ' up'),
+        btn('\u2193', 'btn-outline-secondary', function () { if (i < arr.length - 1) { var t = arr[i]; arr[i] = arr[i + 1]; arr[i + 1] = t; c.rerender(); } }, 'Move ' + noun + ' down'),
+        btn('\u2715', 'btn-outline-danger', function () { arr.splice(i, 1); c.rerender(); }, 'Remove ' + noun));
+    }
+    return h('div', { class: 'd-flex gap-1 ms-auto' },
+      btn('Up', 'btn-outline-secondary', function () { if (i > 0) { var t = arr[i]; arr[i] = arr[i - 1]; arr[i - 1] = t; c.rerender(); } }, 'Move ' + noun + ' up'),
+      btn('Down', 'btn-outline-secondary', function () { if (i < arr.length - 1) { var t = arr[i]; arr[i] = arr[i + 1]; arr[i + 1] = t; c.rerender(); } }, 'Move ' + noun + ' down'),
+      btn('Remove', 'btn-outline-danger', function () { arr.splice(i, 1); c.rerender(); }, 'Remove ' + noun));
+  }
+
+  /* ------------------------------- defaults ------------------------------- */
+
+  var DEFAULTS = {
+    text: function () { return { type: 'text', html: '<p></p>' }; },
+    image: function () { return { type: 'image', src: '', alt: '', caption: '' }; },
+    media: function () { return { type: 'media', kind: 'video', source: 'youtube', src: '', title: '', transcript: '' }; },
+    hotspots: function () { return { type: 'hotspots', image: '', alt: '', points: [] }; },
+    mcq: function () {
+      return { type: 'mcq', question: '', answers: [0, 1, 2, 3].map(function () { return { text: '', correct: false, feedback: '' }; }) };
+    },
+    questionset: function () { return { type: 'questionset', title: '', titleLevel: 4, questions: [DEFAULTS.mcq(), DEFAULTS.mcq()] }; },
+    presentation: function () {
+      return { type: 'presentation', title: '', titleLevel: 3, heightMode: 'tallest', gate: false, summary: false, slides: [{ title: 'Slide 1', elements: [] }] };
+    }
+  };
+
+  /* -------------------------------- editors ------------------------------- */
+
+  function closeOthers(det) {
+    if (!det.open || !det.parentNode) return;
+    Array.prototype.forEach.call(det.parentNode.children, function (n) {
+      if (n !== det && n.tagName === 'DETAILS' && n.open) n.open = false;
+    });
+  }
+
+  var EDITORS = {};
+
+  EDITORS.text = function (spec, c) {
+    return h('div', {}, field('Text (HTML allowed: paragraphs, lists, bold)', textInput(spec, 'html', c, { area: true, rows: 5 })));
+  };
+
+  EDITORS.image = function (spec, c) {
+    return h('div', {},
+      field('Image URL (Brightspace file)', textInput(spec, 'src', c)),
+      checkbox(spec, 'decorative', 'Decorative image (no alt text needed)', c, true),
+      spec.decorative ? null : field('Alt text', textInput(spec, 'alt', c, { area: true, rows: 2 })),
+      field('Caption (optional)', textInput(spec, 'caption', c)));
+  };
+
+  EDITORS.media = function (spec, c) {
+    var srcHint = spec.source === 'brightspace'
+      ? 'Direct file URL (.mp3, .m4a, .mp4, .webm) or the media library embed URL.'
+      : 'Paste the page URL or the video ID.';
+    return h('div', {},
+      h('div', { class: 'd-flex gap-2' },
+        h('div', { class: 'flex-fill' }, field('Type', selectInput(spec, 'kind', [['video', 'Video'], ['audio', 'Audio']], c, true))),
+        h('div', { class: 'flex-fill' }, field('Source', selectInput(spec, 'source', [['youtube', 'YouTube'], ['vimeo', 'Vimeo'], ['brightspace', 'Brightspace media library']], c, true)))),
+      field('Media URL or ID', textInput(spec, 'src', c), srcHint),
+      field('Title (accessible name)', textInput(spec, 'title', c)),
+      spec.source === 'brightspace' && spec.kind === 'video' ? field('Captions file URL (.vtt, optional)', textInput(spec, 'captions', c)) : null,
+      field(spec.kind === 'audio' ? 'Transcript (required for audio)' : 'Transcript (optional)', textInput(spec, 'transcript', c, { area: true, rows: 5 }), 'Separate paragraphs with a blank line.'));
+  };
+
+  EDITORS.mcq = function (spec, c) {
+    var box = h('div', {});
+    var qCtl = textInput(spec, 'question', c, { area: true, rows: 2, ph: 'Question' });
+    qCtl.classList.add('ix-q');
+    box.appendChild(field('Question', qCtl));
+    spec.answers.forEach(function (a, i) {
+      var cbId = 'f' + (++fieldSeq);
+      var tCtl = textInput(a, 'text', c, { ph: 'Answer text' });
+      tCtl.classList.add('ix-anstext');
+      tCtl.setAttribute('aria-label', 'Answer ' + (i + 1) + ' text');
+      var fbCtl = textInput(a, 'feedback', c, { area: true, rows: 2, ph: 'Feedback shown when this answer is chosen' });
+      fbCtl.setAttribute('aria-label', 'Answer ' + (i + 1) + ' feedback');
+      var fbWrap = h('div', { class: 'ix-ansfb' }, fbCtl);
+      var open = a._fb === undefined ? !!a.feedback : a._fb;
+      fbWrap.hidden = !open;
+      function fbClass() { return 'btn-' + (a.feedback ? '' : 'outline-') + 'secondary'; }
+      var fbBtn = btn('Feedback', fbClass(), function () {
+        a._fb = fbWrap.hidden;
+        fbWrap.hidden = !fbWrap.hidden;
+        fbBtn.setAttribute('aria-expanded', String(!fbWrap.hidden));
+      });
+      fbBtn.setAttribute('aria-expanded', String(open));
+      fbCtl.addEventListener('input', function () { fbBtn.className = 'btn btn-sm ' + fbClass(); });
+      box.appendChild(h('div', { class: 'ix-card ix-sub ix-ans' },
+        h('div', { class: 'ix-ansrow' },
+          h('span', { class: 'ix-num', text: String(i + 1) }),
+          h('div', { class: 'form-check' },
+            h('input', { class: 'form-check-input', type: 'checkbox', id: cbId, checked: !!a.correct, onchange: function () { a.correct = this.checked; c.changed(); } }),
+            h('label', { class: 'form-check-label', for: cbId, text: 'Correct' })),
+          tCtl, fbBtn, moveBtns(spec.answers, i, c, 'answer ' + (i + 1), true)),
+        fbWrap));
+    });
+    box.appendChild(h('div', { class: 'd-flex gap-2 align-items-center flex-wrap' },
+      btn('Add answer', 'btn-success', function () { spec.answers.push({ text: '', correct: false, feedback: '' }); c.rerender(); }),
+      checkbox(spec, 'randomAnswers', 'Randomise answer order', c, false)));
+    var n = spec.answers.filter(function (a) { return a.correct; }).length;
+    box.appendChild(h('p', { class: 'text-muted small mb-0', text: (n > 1 ? 'Several correct answers: learners see checkboxes. ' : 'One correct answer: learners see radio buttons. ') + 'Feedback: a short reason; with more than 2 answers, do not reveal the correct one.' }));
+    return box;
+  };
+
+  function round1(v) { return Math.round(Math.max(0, Math.min(100, v)) * 10) / 10; }
+
+  EDITORS.hotspots = function (spec, c) {
+    var box = h('div', {});
+    var imgUrl = textInput(spec, 'image', c);
+    imgUrl.addEventListener('change', function () { c.rerender(); });
+    box.appendChild(field('Image URL (Brightspace file, what learners see)', imgUrl));
+    box.appendChild(field('Alt text (describe the whole image)', textInput(spec, 'alt', c, { area: true, rows: 2 })));
+    var file = h('input', {
+      class: 'form-control form-control-sm', type: 'file', accept: 'image/*',
+      onchange: function () { var f = this.files && this.files[0]; if (f) { spec._local = URL.createObjectURL(f); c.rerender(); } }
+    });
+    box.appendChild(field('Load the real image to place icons (preview only, not saved)', file));
+
+    var src = spec._local || spec.image;
+    if (src) {
+      var stage = h('div', { class: 'ix-hs-stage mb-2' });
+      var img = h('img', { src: src, alt: '' });
+      img.addEventListener('click', function (e) {
+        var r = img.getBoundingClientRect();
+        spec.points.push({ x: round1((e.clientX - r.left) / r.width * 100), y: round1((e.clientY - r.top) / r.height * 100), header: '', html: '' });
+        c.rerender();
+      });
+      stage.appendChild(img);
+      spec.points.forEach(function (pt, i) {
+        var m = h('button', { type: 'button', class: 'ix-marker', text: String(i + 1), 'aria-label': 'Hotspot ' + (i + 1) + ', drag to move' });
+        m.style.left = pt.x + '%';
+        m.style.top = pt.y + '%';
+        m.addEventListener('pointerdown', function (e) {
+          e.preventDefault();
+          m.setPointerCapture(e.pointerId);
+          var moved = false;
+          function move(ev) {
+            var r = img.getBoundingClientRect();
+            pt.x = round1((ev.clientX - r.left) / r.width * 100);
+            pt.y = round1((ev.clientY - r.top) / r.height * 100);
+            m.style.left = pt.x + '%';
+            m.style.top = pt.y + '%';
+            moved = true;
+            c.changed();
+          }
+          function up() {
+            m.removeEventListener('pointermove', move);
+            m.removeEventListener('pointerup', up);
+            if (moved) c.rerender();
+          }
+          m.addEventListener('pointermove', move);
+          m.addEventListener('pointerup', up);
+        });
+        stage.appendChild(m);
+      });
+      box.appendChild(h('div', { class: 'form-text mb-1', text: 'Click the image to add an icon. Drag an icon to move it. Put icons on empty space beside each region, not over printed text.' }));
+      box.appendChild(stage);
+    } else {
+      box.appendChild(h('p', { class: 'text-muted small', text: 'Enter the image URL or load the image file to start placing icons.' }));
+    }
+
+    spec.points.forEach(function (pt, i) {
+      box.appendChild(h('div', { class: 'ix-card ix-sub' },
+        h('div', { class: 'd-flex align-items-center gap-2 mb-2' },
+          h('strong', { text: 'Hotspot ' + (i + 1) }),
+          moveBtns(spec.points, i, c, 'hotspot ' + (i + 1))),
+        field('Heading', textInput(pt, 'header', c)),
+        field('Content (HTML allowed)', textInput(pt, 'html', c, { area: true, rows: 3 })),
+        h('div', { class: 'd-flex gap-2' },
+          h('div', { class: 'flex-fill' }, field('Across (%)', numInput(pt, 'x', c, { min: 0, max: 100, step: 0.1 }))),
+          h('div', { class: 'flex-fill' }, field('Down (%)', numInput(pt, 'y', c, { min: 0, max: 100, step: 0.1 }))))));
+    });
+    box.appendChild(btn('Add hotspot (centre)', 'btn-success', function () { spec.points.push({ x: 50, y: 50, header: '', html: '' }); c.rerender(); }));
+    return box;
+  };
+
+  EDITORS.questionset = function (spec, c) {
+    var box = h('div', {});
+    box.appendChild(h('div', { class: 'd-flex gap-2 flex-wrap' },
+      h('div', { class: 'flex-fill' }, field('Set title (optional)', textInput(spec, 'title', c))),
+      h('div', { style: 'width:9rem' }, field('Title level', selectInput(spec, 'titleLevel', [['3', 'h3'], ['4', 'h4 (default)'], ['5', 'h5']], c, false)))));
+    spec.questions.forEach(function (q, qi) {
+      var det = h('details', { class: 'ix-card' });
+      det.open = q._open === undefined ? qi === 0 : q._open;
+      det.addEventListener('toggle', function () { q._open = det.open; closeOthers(det); });
+      det.appendChild(h('summary', { class: 'fw-bold', text: 'Question ' + (qi + 1) + (q.question ? ': ' + q.question.slice(0, 50) : '') }));
+      var body = h('div', { class: 'mt-2' });
+      body.appendChild(h('div', { class: 'd-flex mb-2' }, moveBtns(spec.questions, qi, c, 'question ' + (qi + 1))));
+      body.appendChild(EDITORS.mcq(q, c));
+      det.appendChild(body);
+      box.appendChild(det);
+    });
+    box.appendChild(btn('Add question', 'btn-success', function () {
+      spec.questions.forEach(function (q) { q._open = false; });
+      var nq = DEFAULTS.mcq(); nq._open = true;
+      spec.questions.push(nq); c.rerender();
+    }));
+    box.appendChild(h('p', { class: 'text-muted small mt-1', text: 'Learners answer one question at a time (retry until correct), then see how many they got right first time. A set needs 2 or more questions.' }));
+    return box;
+  };
+
+  var ELEMENT_LABEL = { text: 'Text', image: 'Image', media: 'Media', hotspots: 'Hotspots', mcq: 'Multiple choice', questionset: 'Question set' };
+
+  EDITORS.presentation = function (spec, c) {
+    var box = h('div', {});
+    box.appendChild(h('div', { class: 'ix-card' },
+      field('Presentation title (accessible name)', textInput(spec, 'title', c)),
+      h('div', { class: 'd-flex gap-2 flex-wrap' },
+        h('div', { class: 'flex-fill' }, field('Slide heading level', selectInput(spec, 'titleLevel', [[2, 'h2'], [3, 'h3 (default)'], [4, 'h4'], [5, 'h5']].map(function (o) { return [String(o[0]), o[1]]; }), c, false), 'Use h3 inside a card, h4 inside a tab pane.')),
+        h('div', { class: 'flex-fill' }, field('Slide height', selectInput(spec, 'heightMode', [['tallest', 'Match the tallest slide'], ['auto', 'Fit each slide']], c, false)))),
+      checkbox(spec, 'gate', 'Learners must answer each question correctly before Next', c, false),
+      checkbox(spec, 'summary', 'Add a summary slide at the end', c, false)));
+
+    spec.slides.forEach(function (s, si) {
+      var det = h('details', { class: 'ix-card' });
+      det.open = s._open === undefined ? si === 0 : s._open;
+      det.addEventListener('toggle', function () { s._open = det.open; closeOthers(det); });
+      det.appendChild(h('summary', { class: 'fw-bold', text: 'Slide ' + (si + 1) + (s.title && s.title !== 'Slide ' + (si + 1) ? ': ' + s.title : '') }));
+      var body = h('div', { class: 'mt-2' });
+      body.appendChild(h('div', { class: 'd-flex mb-2' }, moveBtns(spec.slides, si, c, 'slide ' + (si + 1))));
+      body.appendChild(field('Slide title', textInput(s, 'title', c)));
+      s.elements.forEach(function (e, ei) {
+        body.appendChild(h('div', { class: 'ix-card ix-sub' },
+          h('div', { class: 'd-flex align-items-center gap-2 mb-2' },
+            h('span', { class: 'badge bg-secondary', text: ELEMENT_LABEL[e.type] || e.type }),
+            moveBtns(s.elements, ei, c, 'item ' + (ei + 1))),
+          EDITORS[e.type](e, c)));
+      });
+      body.appendChild(h('div', { class: 'd-flex gap-1 flex-wrap' },
+        h('span', { class: 'align-self-center small me-1', text: 'Add to this slide:' }),
+        ['text', 'image', 'media', 'hotspots', 'mcq', 'questionset'].map(function (t) {
+          return btn(ELEMENT_LABEL[t], 'btn-outline-primary', function () { s.elements.push(DEFAULTS[t]()); c.rerender(); });
+        })));
+      det.appendChild(body);
+      box.appendChild(det);
+    });
+    box.appendChild(btn('Add slide', 'btn-success', function () {
+      spec.slides.forEach(function (x) { x._open = false; });
+      spec.slides.push({ title: 'Slide ' + (spec.slides.length + 1), elements: [], _open: true }); c.rerender();
+    }));
+    return box;
+  };
+
+  /* ------------------------------ clipboard etc --------------------------- */
+
+  function toast(msg, type) {
+    var t = document.getElementById('liveToast');
+    document.getElementById('toastBody').textContent = msg;
+    var head = t.querySelector('.toast-header');
+    head.style.backgroundColor = type === 'error' ? '#842029' : '#006272';
+    head.style.color = '#fff';
+    document.getElementById('toastTitle').textContent = type === 'error' ? 'Problem' : 'Done';
+    if (window.bootstrap && bootstrap.Toast) bootstrap.Toast.getOrCreateInstance(t, { delay: 3500 }).show();
+  }
+
+  function fallbackCopy(payload, asHtml) {
+    var tmp = document.createElement(asHtml ? 'div' : 'textarea');
+    tmp.style.cssText = 'position:absolute;left:-9999px;top:0';
+    if (asHtml) { tmp.contentEditable = 'true'; tmp.innerHTML = payload; } else { tmp.value = payload; }
+    document.body.appendChild(tmp);
+    var ok = false;
+    try {
+      if (asHtml) { var r = document.createRange(); r.selectNodeContents(tmp); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+      else { tmp.select(); }
+      ok = document.execCommand('copy');
+      if (asHtml) window.getSelection().removeAllRanges();
+    } catch (e) { ok = false; }
+    document.body.removeChild(tmp);
+    return ok;
+  }
+
+  async function copyHtml(html) {
+    var payload = '<!-- x-tinymce/html -->  ' + html + ' ';
+    try {
+      if (navigator.clipboard && window.isSecureContext && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([payload], { type: 'text/html' }) })]);
+        toast('Copied. Paste into a content row in the D2L editor.', 'success');
+        return;
+      }
+    } catch (e) { /* fall through */ }
+    if (fallbackCopy(payload, true)) toast('Copied. Paste into a content row in the D2L editor.', 'success');
+    else toast('Copy failed. Try the code button.', 'error');
+  }
+
+  async function copyText(text, msg) {
+    msg = msg || 'Code copied. Paste into the HTML view.';
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        toast(msg, 'success');
+        return;
+      }
+    } catch (e) { /* fall through */ }
+    if (fallbackCopy(text, false)) toast(msg, 'success');
+    else toast('Copy failed.', 'error');
+  }
+
+  var ACTIVE_KEY = 'rcpi-ix-builder-active-v1';
+
+  function labelFor(cfg) { return cfg.host.getAttribute('data-name'); }
+
+  function showSection(key) {
+    var found = SECTIONS.filter(function (c) { return c.key === key; })[0] || SECTIONS[0];
+    SECTIONS.forEach(function (cfg) { cfg.host.classList.toggle('d-none', cfg !== found); });
+    document.getElementById('navLabel').textContent = labelFor(found);
+    document.querySelectorAll('#dynamicNavItems .creator-nav-item').forEach(function (b, i) {
+      if (SECTIONS[i] === found) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+    });
+    try { localStorage.setItem(ACTIVE_KEY, found.key); } catch (e) { /* storage unavailable */ }
+    window.scrollTo(0, 0);
+  }
+
+  function openLoad() {
+    bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('loadOffcanvas')).show();
+  }
+
+  /* -------------------------------- sections ------------------------------ */
+
+  var SECTIONS = [
+    { key: 'presentation', comp: 'pres', name: 'Presentation', blurb: 'Replaces Course Presentation. Slides can hold text, images, media, hotspots, multiple choice and question sets.' },
+    { key: 'mcq', comp: 'mcq', name: 'Multiple Choice', blurb: 'One correct answer gives radio buttons, several give checkboxes. Per-answer feedback, no overall feedback.' },
+    { key: 'questionset', comp: 'qs', name: 'Question Set', blurb: 'Two or more multiple choice questions, one at a time, with a first-try result at the end. Use Multiple Choice for a single question.' },
+    { key: 'hotspots', comp: 'hs', name: 'Hotspots', blurb: 'Info icon in #002d72. "Select the icons to reveal." is added automatically.' },
+    { key: 'media', comp: 'media', name: 'Media', blurb: 'Brightspace media library, YouTube or Vimeo. Audio needs a transcript.' }
+  ];
+
+  var OBF_KEY = 'rcpi-ix-builder-obf-v1';
+  function obfOn() { var el = document.getElementById('obfToggle'); return !el || el.checked; }
+
+  function slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+  function digits(s) { return String(s || '').replace(/\D/g, ''); }
+
+  function composeId(cfg) {
+    var m = cfg.meta;
+    return cfg.comp + '-' + (slug(m.descriptor) || 'item') + '-M' + (digits(m.m) || '0') + '-W' + (digits(m.w) || '0') + '-P' + (digits(m.p) || '0') + '-' + (digits(m.nn) || '01');
+  }
+
+  function parseId(id, cfg) {
+    var m = String(id || '').match(/^[a-z]+-(.+)-M(\d+)-W(\d+)-P(\d+)-(\d+)$/);
+    if (m) cfg.meta = { descriptor: m[1], m: m[2], w: m[3], p: m[4], nn: m[5] };
+  }
+
+  function clean(spec) {
+    return JSON.parse(JSON.stringify(spec, function (k, v) { return k.charAt(0) === '_' ? undefined : v; }));
+  }
+
+  function previewSpec(cfg) {
+    var s = JSON.parse(JSON.stringify(cfg.spec, function (k, v) {
+      if (k === 'image' && this && this._local) return this._local;
+      return k.charAt(0) === '_' ? undefined : v;
+    }));
+    s.id = composeId(cfg);
+    if (cfg.previewNoGate && s.type === 'presentation') s.gate = false;
+    return obfOn() ? IX.obfuscate(s) : s;
+  }
+
+  function outSpec(cfg) {
+    var s = clean(cfg.spec);
+    return Object.assign({ type: s.type, id: composeId(cfg) }, s);
+  }
+
+  function saveAll() {
+    try {
+      var data = { savedAt: new Date().toISOString(), sections: {} };
+      SECTIONS.forEach(function (cfg) { data.sections[cfg.key] = { spec: clean(cfg.spec), meta: cfg.meta }; });
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
+    } catch (e) { /* storage unavailable */ }
+  }
+
+  function restoreAll() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return false;
+      var data = JSON.parse(raw);
+      var any = false;
+      SECTIONS.forEach(function (cfg) {
+        var d = data.sections && data.sections[cfg.key];
+        if (d && d.spec && d.spec.type === cfg.key) { cfg.spec = d.spec; cfg.meta = d.meta || cfg.meta; any = true; }
+      });
+      return any;
+    } catch (e) { return false; }
+  }
+
+  function buildSection(cfg) {
+    var host = document.getElementById('sec-' + cfg.key);
+    cfg.spec = DEFAULTS[cfg.key]();
+    cfg.meta = { descriptor: '', m: '1', w: '1', p: '1', nn: '01' };
+    cfg.host = host;
+  }
+
+  function mountSection(cfg) {
+    var host = cfg.host;
+    var old = host.querySelectorAll(':scope > :not(h2)');
+    Array.prototype.forEach.call(old, function (n) { host.removeChild(n); });
+
+    var timer = null;
+    var saveTimer = null;
+    var ctx = {
+      changed: function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () { refreshPreview(); }, 250);
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveAll, 500);
+      },
+      rerender: function () { renderEditor(); ctx.changed(); }
+    };
+
+    host.appendChild(h('div', { class: 'ix-edit section-header d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2' },
+      h('div', { class: 'text-muted small', text: cfg.blurb }),
+      h('div', { class: 'd-flex gap-1 flex-wrap' },
+        btn(cfg.name, 'btn-secondary', function () { copyHtml(IX.markup(outSpec(cfg), { obfuscate: obfOn() })); }),
+        btn(cfg.name + ' Code', 'btn-outline-secondary', function () { copyText(IX.markup(outSpec(cfg), { obfuscate: obfOn() })); }),
+        btn('Copy JSON', 'btn-outline-secondary', function () { copyText(JSON.stringify(outSpec(cfg), null, 2), 'JSON copied. Answers are readable in JSON, so keep it private.'); }),
+        btn('Paste JSON', 'btn-outline-secondary', function () { openLoad(); }),
+        btn('Reset', 'btn-outline-danger', function () {
+          if (!window.confirm('Clear the ' + cfg.name + ' item and start again?')) return;
+          cfg.spec = DEFAULTS[cfg.key]();
+          mountSection(cfg);
+          saveAll();
+        }))));
+
+    var idCode = h('code', { class: 'ix-id' });
+    function refreshId() { idCode.textContent = composeId(cfg); }
+    function metaInput(label, key, width, mode) {
+      var ctl = h('input', { class: 'form-control form-control-sm', type: 'text', style: 'width:' + width,
+        oninput: function () { cfg.meta[key] = this.value; refreshId(); ctx.changed(); } });
+      ctl.value = cfg.meta[key];
+      return h('div', {}, field(label, ctl));
+    }
+    var layout = h('div', { class: 'ix-layout' });
+    var left = h('div', { class: 'ix-left' });
+    var right = h('div', { class: 'ix-right' });
+    layout.appendChild(left);
+    layout.appendChild(right);
+    host.appendChild(layout);
+    left.appendChild(h('div', { class: 'ix-edit d-flex flex-wrap gap-2 align-items-end mb-3' },
+      metaInput('Descriptor', 'descriptor', '12rem'), metaInput('Module', 'm', '4.5rem'), metaInput('Week', 'w', '4.5rem'),
+      metaInput('Page', 'p', '4.5rem'), metaInput('No.', 'nn', '4.5rem'),
+      h('div', { class: 'mb-2' }, h('div', { class: 'form-label small', text: 'Item ID' }), idCode)));
+    refreshId();
+
+    var editorHost = h('div', { class: 'ix-edit' });
+    left.appendChild(editorHost);
+    var warnHost = h('ul', { class: 'ix-warn text-danger', 'aria-live': 'polite' });
+    var warnSum = h('summary', { text: '' });
+    var warnWrap = h('details', { class: 'ix-edit ix-warnwrap' }, warnSum, warnHost);
+    warnWrap.hidden = true;
+    right.appendChild(warnWrap);
+
+    var previewBox = h('div', { class: 'ix-preview-wrap' });
+    previewBox.appendChild(h('div', { class: 'ix-preview-label', text: 'Live preview (learner view)' }));
+    if (cfg.key === 'presentation') {
+      var cb = h('input', { class: 'form-check-input', type: 'checkbox', id: 'pv-nogate', onchange: function () { cfg.previewNoGate = this.checked; refreshPreview(); } });
+      cb.checked = !!cfg.previewNoGate;
+      previewBox.appendChild(h('div', { class: 'form-check mb-2' }, cb, h('label', { class: 'form-check-label', for: 'pv-nogate', text: 'Preview without gating' })));
+    }
+    var previewHost = h('div', { class: 'ix-preview' });
+    previewBox.appendChild(previewHost);
+    right.appendChild(previewBox);
+
+    function renderEditor() {
+      editorHost.innerHTML = '';
+      editorHost.appendChild(EDITORS[cfg.key](cfg.spec, ctx));
+    }
+
+    function currentSlide() {
+      var cnt = previewHost.querySelector('.rcpi-ix-pres-count');
+      var m = cnt && cnt.textContent.match(/Slide (\d+)/);
+      return m ? parseInt(m[1], 10) - 1 : 0;
+    }
+
+    function refreshPreview() {
+      var ps = previewSpec(cfg);
+      if (ps.type === 'presentation') ps.startSlide = currentSlide();
+      IX.render(previewHost, ps);
+      warnHost.innerHTML = '';
+      var warns = IX.validate(clean(cfg.spec));
+      warns.forEach(function (w) { warnHost.appendChild(h('li', { text: w })); });
+      warnWrap.hidden = !warns.length;
+      warnSum.textContent = warns.length + (warns.length === 1 ? ' thing to fix' : ' things to fix') + ' (click to show)';
+    }
+
+    function applySpec(spec) {
+      if (!spec || spec.type !== cfg.key) { toast('That item is a "' + (spec && spec.type) + '" item, not ' + cfg.key + '.', 'error'); return; }
+      parseId(spec.id, cfg);
+      delete spec.id;
+      cfg.spec = spec;
+      mountSection(cfg);
+      saveAll();
+      toast('Loaded into ' + cfg.name + '.', 'success');
+    }
+    cfg.applySpec = applySpec;
+    cfg.refresh = refreshPreview;
+
+    renderEditor();
+    refreshPreview();
+  }
+
+  /* ------------------------- navigation and item filter -------------------- */
+
+  function wireTopBar() {
+    var toggle = document.getElementById('navToggle');
+    var dd = document.getElementById('navDropdown');
+    var items = document.getElementById('dynamicNavItems');
+    var filter = document.getElementById('componentFilter');
+    var itemBtns = {};
+
+    function openDd() { dd.classList.add('show'); toggle.setAttribute('aria-expanded', 'true'); }
+    function closeDd() { dd.classList.remove('show'); toggle.setAttribute('aria-expanded', 'false'); }
+    function resetFilter() {
+      filter.value = '';
+      Object.keys(itemBtns).forEach(function (k) { itemBtns[k].classList.remove('d-none'); });
+    }
+
+    SECTIONS.forEach(function (cfg) {
+      var b = h('button', { type: 'button', class: 'creator-nav-item', text: labelFor(cfg), onclick: function () {
+        showSection(cfg.key);
+        closeDd();
+        resetFilter();
+      } });
+      items.appendChild(b);
+      itemBtns[cfg.key] = b;
+    });
+
+    toggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (dd.classList.contains('show')) closeDd(); else openDd();
+    });
+    document.addEventListener('click', function (e) {
+      if (!dd.contains(e.target) && e.target !== filter) closeDd();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && dd.classList.contains('show')) { closeDd(); toggle.focus(); }
+    });
+    filter.addEventListener('input', function () {
+      var q = this.value.trim().toLowerCase();
+      SECTIONS.forEach(function (cfg) {
+        itemBtns[cfg.key].classList.toggle('d-none', !!q && labelFor(cfg).toLowerCase().indexOf(q) === -1);
+      });
+      if (q) openDd(); else closeDd();
+    });
+    filter.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var first = SECTIONS.filter(function (cfg) { return !itemBtns[cfg.key].classList.contains('d-none'); })[0];
+      if (first) { showSection(first.key); closeDd(); resetFilter(); }
+    });
+
+    var obf = document.getElementById('obfToggle');
+    try { obf.checked = localStorage.getItem(OBF_KEY) !== '0'; } catch (e) { /* storage unavailable */ }
+    SECTIONS.forEach(function (cfg) { if (cfg.refresh) cfg.refresh(); });
+    obf.addEventListener('change', function () {
+      try { localStorage.setItem(OBF_KEY, obf.checked ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+      SECTIONS.forEach(function (cfg) { if (cfg.refresh) cfg.refresh(); });
+    });
+
+    var rowHtml = '<div class="row wysiwyg-mode" contenteditable="false">\n<div class="deletion-guard" contenteditable="true"></div>\n<div class="editable-row-content wysiwyg-mode" contenteditable="true"></div>\n<div class="deletion-guard" contenteditable="true"></div>\n</div>';
+    document.getElementById('copyNewRow').addEventListener('click', function () { copyHtml(rowHtml); });
+    document.getElementById('copy10Rows').addEventListener('click', function () { copyHtml(new Array(11).join(rowHtml)); });
+
+    document.getElementById('loadOffcanvas').addEventListener('shown.bs.offcanvas', function () {
+      document.getElementById('loadText').focus();
+    });
+    document.getElementById('loadBtn').addEventListener('click', function () {
+      var text = document.getElementById('loadText').value.trim();
+      if (!text) return;
+      var specs = [];
+      if (text.charAt(0) === '{' || text.charAt(0) === '[') {
+        try { specs = [].concat(JSON.parse(text)); } catch (e) { toast('That JSON could not be read.', 'error'); return; }
+      } else {
+        var doc = new DOMParser().parseFromString(text, 'text/html');
+        doc.querySelectorAll('[data-spec]').forEach(function (n) {
+          try { var s = JSON.parse(n.getAttribute('data-spec')); if (!s.id && n.id) s.id = n.id; specs.push(s); } catch (e) { /* skip */ }
+        });
+      }
+      if (!specs.length) { toast('No interactive item found in that text.', 'error'); return; }
+      var loaded = 0;
+      var skipped = 0;
+      var seen = {};
+      var firstKey = null;
+      specs.forEach(function (s) {
+        var cfg = SECTIONS.filter(function (c) { return c.key === s.type; })[0];
+        if (!cfg || seen[s.type]) { skipped += 1; return; }
+        seen[s.type] = true;
+        cfg.applySpec(IX.deobfuscate(s));
+        if (!firstKey) firstKey = cfg.key;
+        loaded += 1;
+      });
+      if (skipped) toast('Loaded ' + loaded + ' item(s). Skipped ' + skipped + ' because a section holds one item. Paste the others one at a time.', 'error');
+      if (loaded) {
+        showSection(firstKey);
+        document.getElementById('loadText').value = '';
+        var oc = bootstrap.Offcanvas.getInstance(document.getElementById('loadOffcanvas'));
+        if (oc) oc.hide();
+      }
+    });
+  }
+
+  /* ---------------------------------- boot -------------------------------- */
+
+  SECTIONS.forEach(buildSection);
+  var restored = restoreAll();
+  SECTIONS.forEach(mountSection);
+  wireTopBar();
+  var startKey = 'presentation';
+  try { startKey = localStorage.getItem(ACTIVE_KEY) || startKey; } catch (e) { /* storage unavailable */ }
+  showSection(startKey);
+  if (restored) toast('Restored your autosaved work from this browser.', 'success');
+});
+</script>
+</body></html>

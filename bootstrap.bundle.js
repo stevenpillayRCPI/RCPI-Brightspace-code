@@ -1,3 +1,4 @@
+/* bootstrap.bundle.js - RCPI v1.0 (2026-10-21): Bootstrap 5.3.3 bundle plus loaders for bootstrap-custom-cleanup.js, chart.min.js and rcpi-interactives.js */
 /*!
  * Bootstrap v5.3.3 (https://getbootstrap.com/)
  * Copyright 2011-2024 The Bootstrap Authors (https://github.com/twbs/bootstrap/graphs/contributors)
@@ -3375,4 +3376,21 @@
     console.error('Failed to load chart.min.js');
   };
   document.head.appendChild(s);
+}());
+
+(function(){
+  /* Loads the interactive items runtime (RCPI Interactive Builder output) only on pages that contain an item. */
+  if(window.RCPIInteractives&&window.RCPIInteractives.__loaded) return;
+  function load(){
+    if(!document.querySelector('.rcpi-ix[data-spec]')) return;
+    if(document.querySelector('script[data-rcpi-ix]')) return;
+    var s=document.createElement('script');
+    s.src='https://brightspace.rcpi.ie/shared/HTML-Template-Library/Templates2025/rcpi-interactives.js';
+    s.dataset.rcpiIx='1';
+    s.onerror=function(){
+      console.error('Failed to load rcpi-interactives.js');
+    };
+    document.head.appendChild(s);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load); else load();
 }());
