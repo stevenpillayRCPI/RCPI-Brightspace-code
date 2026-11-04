@@ -1,5 +1,5 @@
 /* -------------------------------------------------------------------------- */
-/* bootstrap-custom-cleanup.js — v1.8 (2026-11-04)                           */
+/* bootstrap-custom-cleanup.js — v2.0.0 (2026-11-04)                          */
 /* -------------------------------------------------------------------------- */
 /* Purpose                                                                    */
 /* Shared runtime for RCPI / Brightspace template enhancements.               */
@@ -34,6 +34,7 @@
     referencesReady: false,
     carouselFullscreenBound: false,
     carouselImageOnly: null,
+    fsCarousel: null,
     escLocked: false,
     imageOverlayOpen: false
   };
@@ -715,8 +716,10 @@
     if (document.mozCancelFullScreen) return document.mozCancelFullScreen();
   }
 
-  /* Carousel fullscreen flow (v1.8)
-     Icon:   normal -> carousel fullscreen -> image only -> back to carousel fullscreen.
+  /* Carousel fullscreen flow (v2.0)
+     Icons:  normal view: fullscreen icon enters carousel fullscreen.
+             carousel fullscreen: that icon becomes 'exit' and a second icon opens image only.
+             image only: one icon steps back to carousel fullscreen.
      Image:  click in carousel fullscreen -> image only. Click in image only -> magnify.
      Esc:    magnified or image only -> carousel fullscreen -> normal view.
      Image only is an in-page overlay inside the fullscreen carousel (no second
@@ -756,7 +759,7 @@
     state.carouselImageOnly = null;
     if (cur.overlay.parentNode) cur.overlay.parentNode.removeChild(cur.overlay);
     if (restoreFocus) {
-      var trigger = cur.carousel.querySelector(':scope > .fullscreen-icon');
+      var trigger = cur.carousel.querySelector(':scope > .bb-carousel-image-only-icon') || cur.carousel.querySelector(':scope > .fullscreen-icon');
       if (trigger) trigger.focus();
     }
   }
@@ -809,7 +812,7 @@
     icon.setAttribute('aria-label', 'Back to carousel full screen');
     icon.setAttribute('tabindex', '0');
     var i = document.createElement('i');
-    i.className = 'bi bi-arrows-fullscreen';
+    i.className = 'bi bi-fullscreen-exit';
     i.setAttribute('aria-hidden', 'true');
     icon.appendChild(i);
     var back = function () { closeCarouselImageOnly(true); };
@@ -832,6 +835,19 @@
     icon.focus();
   }
 
+  /* Swaps the carousel's fullscreen icon between enter and exit, and shows the
+     image-only icon only while the carousel is in fullscreen. */
+  function setCarouselFsUi(carousel, inFs) {
+    var fsIcon = carousel.querySelector(':scope > .fullscreen-icon:not(.bb-carousel-image-only-icon)');
+    var imgIcon = carousel.querySelector(':scope > .bb-carousel-image-only-icon');
+    if (fsIcon) {
+      var glyph = fsIcon.querySelector('i');
+      if (glyph) glyph.className = inFs ? 'bi bi-fullscreen-exit' : 'bi bi-arrows-fullscreen';
+      fsIcon.setAttribute('aria-label', inFs ? 'Exit full screen' : 'View image in fullscreen');
+    }
+    if (imgIcon) imgIcon.style.display = inFs ? '' : 'none';
+  }
+
   function initCarouselFullscreen(root) {
     qsa(root, '.carousel:not(.text-carousel)').forEach(function (carousel) {
       if (!ensureOnce(carousel, 'bbCarouselFsReady')) return;
@@ -851,29 +867,60 @@
         carousel.appendChild(fullscreenIcon);
       }
 
+      var imageIcon = null;
+      if (activeCarouselImage(carousel)) {
+        imageIcon = document.createElement('div');
+        imageIcon.className = 'fullscreen-icon bb-carousel-image-only-icon';
+        imageIcon.style.right = '3rem';
+        imageIcon.style.top = '3rem';
+        imageIcon.style.display = 'none';
+        imageIcon.setAttribute('role', 'button');
+        imageIcon.setAttribute('aria-label', 'View image only in full screen');
+        imageIcon.setAttribute('tabindex', '0');
+        var imgGlyph = document.createElement('i');
+        imgGlyph.className = 'bi bi-image';
+        imgGlyph.setAttribute('aria-hidden', 'true');
+        imageIcon.appendChild(imgGlyph);
+        carousel.appendChild(imageIcon);
+      }
+
       var parent = carousel.parentElement;
       if (parent) {
-        parent.addEventListener('mouseenter', function () { fullscreenIcon.style.opacity = '1'; });
-        parent.addEventListener('mouseleave', function () { fullscreenIcon.style.opacity = '0.2'; });
+        parent.addEventListener('mouseenter', function () {
+          fullscreenIcon.style.opacity = '1';
+          if (imageIcon) imageIcon.style.opacity = '1';
+        });
+        parent.addEventListener('mouseleave', function () {
+          fullscreenIcon.style.opacity = '0.2';
+          if (imageIcon) imageIcon.style.opacity = '0.2';
+        });
       }
 
       function toggle() {
-        if (!isCarouselFs(carousel)) {
-          requestFs(carousel);
-          return;
-        }
+        if (isCarouselFs(carousel)) exitFs();
+        else requestFs(carousel);
+      }
+
+      function openImageOnly() {
         var image = activeCarouselImage(carousel);
         if (image) openCarouselImageOnly(carousel, image);
-        else exitFs();
+      }
+
+      function activateOnKey(handler) {
+        return function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handler();
+          }
+        };
       }
 
       fullscreenIcon.addEventListener('click', toggle);
-      fullscreenIcon.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
+      fullscreenIcon.addEventListener('keydown', activateOnKey(toggle));
+      if (imageIcon) {
+        imageIcon.addEventListener('click', openImageOnly);
+        imageIcon.addEventListener('keydown', activateOnKey(openImageOnly));
+      }
     });
 
     if (!state.carouselFullscreenBound) {
@@ -891,6 +938,20 @@
 
       document.addEventListener('fullscreenchange', function () {
         var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+        if (fsEl && fsEl.classList && fsEl.classList.contains('carousel')) {
+          state.fsCarousel = fsEl;
+        } else if (!fsEl && state.fsCarousel) {
+          /* The page often jumps to the top on exit; bring the carousel back into view. */
+          var left = state.fsCarousel;
+          state.fsCarousel = null;
+          var restore = function () {
+            var r = left.getBoundingClientRect();
+            var vh = window.innerHeight || document.documentElement.clientHeight;
+            left.scrollIntoView({ block: r.height < vh ? 'center' : 'start' });
+          };
+          requestAnimationFrame(restore);
+          setTimeout(restore, 150);
+        }
         if (state.carouselImageOnly && fsEl !== state.carouselImageOnly.carousel) {
           closeCarouselImageOnly(false);
         }
@@ -898,6 +959,7 @@
         else unlockEscape();
 
         qsa(document, '.carousel:not(.text-carousel)').forEach(function (carousel) {
+          setCarouselFsUi(carousel, document.fullscreenElement === carousel);
           if (document.fullscreenElement === carousel) {
             carousel.style.overflow = 'auto';
             qsa(carousel, '.carousel-image img').forEach(function (img) {
