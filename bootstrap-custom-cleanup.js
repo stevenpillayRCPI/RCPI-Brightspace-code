@@ -1,5 +1,5 @@
 /* -------------------------------------------------------------------------- */
-/* bootstrap-custom-cleanup.js — v1.7 (2026-10-19)                           */
+/* bootstrap-custom-cleanup.js — v1.8 (2026-11-04)                           */
 /* -------------------------------------------------------------------------- */
 /* Purpose                                                                    */
 /* Shared runtime for RCPI / Brightspace template enhancements.               */
@@ -33,6 +33,8 @@
     clarityLoaded: false,
     referencesReady: false,
     carouselFullscreenBound: false,
+    carouselImageOnly: null,
+    escLocked: false,
     imageOverlayOpen: false
   };
 
@@ -713,6 +715,123 @@
     if (document.mozCancelFullScreen) return document.mozCancelFullScreen();
   }
 
+  /* Carousel fullscreen flow (v1.8)
+     Icon:   normal -> carousel fullscreen -> image only -> back to carousel fullscreen.
+     Image:  click in carousel fullscreen -> image only. Click in image only -> magnify.
+     Esc:    magnified or image only -> carousel fullscreen -> normal view.
+     Image only is an in-page overlay inside the fullscreen carousel (no second
+     native fullscreen), so stepping back never needs a new fullscreen request.
+     Browsers normally swallow Esc and leave fullscreen entirely, so Esc is
+     captured with the Keyboard Lock API (Chromium only). Where that is
+     unavailable Esc leaves all fullscreen and the carousel is back in view. */
+
+  function isCarouselFs(carousel) {
+    return (document.fullscreenElement || document.webkitFullscreenElement) === carousel;
+  }
+
+  function activeCarouselImage(carousel) {
+    return carousel.querySelector('.carousel-item.active .carousel-image img:not(.decorative)') ||
+      carousel.querySelector('.carousel-image img:not(.decorative)');
+  }
+
+  function lockEscape() {
+    try {
+      if (navigator.keyboard && navigator.keyboard.lock) {
+        navigator.keyboard.lock(['Escape']).then(
+          function () { state.escLocked = true; },
+          function () { state.escLocked = false; }
+        );
+      }
+    } catch (e) { state.escLocked = false; }
+  }
+
+  function unlockEscape() {
+    state.escLocked = false;
+    try { if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); } catch (e) { /* ignore */ }
+  }
+
+  function closeCarouselImageOnly(restoreFocus) {
+    var cur = state.carouselImageOnly;
+    if (!cur) return;
+    state.carouselImageOnly = null;
+    if (cur.overlay.parentNode) cur.overlay.parentNode.removeChild(cur.overlay);
+    if (restoreFocus) {
+      var trigger = cur.carousel.querySelector(':scope > .fullscreen-icon');
+      if (trigger) trigger.focus();
+    }
+  }
+
+  function openCarouselImageOnly(carousel, image) {
+    if (state.carouselImageOnly || !isCarouselFs(carousel)) return;
+
+    var overlay = document.createElement('div');
+    overlay.className = 'bb-carousel-image-only';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Image only view');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:1000;background:#000;overflow:auto;display:flex;align-items:center;justify-content:center;';
+
+    /* class "decorative" keeps the ALT-badge and standalone-fullscreen initialisers off this copy */
+    var img = document.createElement('img');
+    img.className = 'decorative';
+    img.src = image.currentSrc || image.src;
+    img.alt = image.alt || 'Image';
+    img.style.cssText = 'display:block;margin:auto;max-width:100%;max-height:100%;width:auto;height:auto;cursor:zoom-in;';
+
+    var magnified = false;
+    img.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (magnified) {
+        magnified = false;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '100%';
+        img.style.cursor = 'zoom-in';
+        return;
+      }
+      var rect = img.getBoundingClientRect();
+      var xRatio = (e.clientX - rect.left) / rect.width;
+      var yRatio = (e.clientY - rect.top) / rect.height;
+      magnified = true;
+      img.style.maxWidth = 'none';
+      img.style.maxHeight = 'none';
+      img.style.cursor = 'zoom-out';
+      requestAnimationFrame(function () {
+        var nr = img.getBoundingClientRect();
+        overlay.scrollLeft += nr.left + xRatio * nr.width - window.innerWidth / 2;
+        overlay.scrollTop += nr.top + yRatio * nr.height - window.innerHeight / 2;
+      });
+    });
+
+    var icon = document.createElement('div');
+    icon.className = 'fullscreen-icon';
+    icon.style.cssText = 'position:fixed;top:1rem;right:1rem;opacity:1;';
+    icon.setAttribute('role', 'button');
+    icon.setAttribute('aria-label', 'Back to carousel full screen');
+    icon.setAttribute('tabindex', '0');
+    var i = document.createElement('i');
+    i.className = 'bi bi-arrows-fullscreen';
+    i.setAttribute('aria-hidden', 'true');
+    icon.appendChild(i);
+    var back = function () { closeCarouselImageOnly(true); };
+    icon.addEventListener('click', function (e) { e.stopPropagation(); back(); });
+    icon.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); back(); }
+    });
+
+    /* Click on the black backdrop (not the image) steps back, same as Esc. */
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) back(); });
+    /* Keep arrow keys from changing the slide underneath. */
+    overlay.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.stopPropagation();
+    });
+
+    overlay.appendChild(img);
+    overlay.appendChild(icon);
+    carousel.appendChild(overlay);
+    state.carouselImageOnly = { carousel: carousel, overlay: overlay };
+    icon.focus();
+  }
+
   function initCarouselFullscreen(root) {
     qsa(root, '.carousel:not(.text-carousel)').forEach(function (carousel) {
       if (!ensureOnce(carousel, 'bbCarouselFsReady')) return;
@@ -739,8 +858,13 @@
       }
 
       function toggle() {
-        if (document.fullscreenElement === carousel) exitFs();
-        else requestFs(carousel);
+        if (!isCarouselFs(carousel)) {
+          requestFs(carousel);
+          return;
+        }
+        var image = activeCarouselImage(carousel);
+        if (image) openCarouselImageOnly(carousel, image);
+        else exitFs();
       }
 
       fullscreenIcon.addEventListener('click', toggle);
@@ -754,7 +878,25 @@
 
     if (!state.carouselFullscreenBound) {
       state.carouselFullscreenBound = true;
+
+      /* Only fires when Esc is locked (Chromium): step back one level. */
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || !state.escLocked) return;
+        var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+        if (!fsEl || !fsEl.classList || !fsEl.classList.contains('carousel')) return;
+        e.preventDefault();
+        if (state.carouselImageOnly) closeCarouselImageOnly(true);
+        else exitFs();
+      }, true);
+
       document.addEventListener('fullscreenchange', function () {
+        var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+        if (state.carouselImageOnly && fsEl !== state.carouselImageOnly.carousel) {
+          closeCarouselImageOnly(false);
+        }
+        if (fsEl && fsEl.classList && fsEl.classList.contains('carousel')) lockEscape();
+        else unlockEscape();
+
         qsa(document, '.carousel:not(.text-carousel)').forEach(function (carousel) {
           if (document.fullscreenElement === carousel) {
             carousel.style.overflow = 'auto';
@@ -805,13 +947,9 @@
     }
   }
 
-  /* Lets a carousel image be viewed alone (no caption) via the same lightbox
-     used for standalone images, distinct from the fullscreen-icon path above
-     which intentionally fullscreens the whole carousel including its caption.
-     Only active once the carousel itself is in fullscreen — see the
-     fullscreenchange handler in initCarouselFullscreen, which arms/disarms
-     this via the image's data-bb-zoom-armed flag. Outside fullscreen the
-     image has no zoom cursor and clicking it does nothing. */
+  /* Clicking a carousel image while the carousel is in fullscreen opens the
+     image-only view (no caption, no arrows). Armed via data-bb-zoom-armed by
+     the fullscreenchange handler above; outside fullscreen a click does nothing. */
   function initCarouselImageZoom(root) {
     qsa(root, '.carousel:not(.text-carousel) .carousel-image img:not(.decorative)').forEach(function (image) {
       if (!ensureOnce(image, 'bbCarouselImageZoomReady')) return;
@@ -819,7 +957,8 @@
       var open = function (event) {
         if (image.dataset.bbZoomArmed !== '1') return;
         event.stopPropagation();
-        buildImageOverlay(image, image);
+        var carousel = image.closest('.carousel');
+        if (carousel) openCarouselImageOnly(carousel, image);
       };
       image.addEventListener('click', open);
       image.addEventListener('keydown', function (e) {
